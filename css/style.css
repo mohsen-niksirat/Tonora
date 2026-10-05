@@ -89,11 +89,16 @@ main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width
 }
 .song-card:hover { border-color: var(--accent); }
 .song-card small { color: var(--muted); }
-.learn-hud { display: flex; align-items: center; gap: .8rem; padding: .3rem 0; }
-.learn-status { flex: 1; text-align: center; font-weight: 700; color: var(--accent); }
+.learn-hud { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; padding: .3rem 0; }
+.learn-hud .btn.toggle { opacity: .55; }
+.learn-hud .btn.toggle.active { opacity: 1; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.learn-status { flex: 1; text-align: center; font-weight: 700; color: var(--accent); min-width: 6em; }
 .learn-score { font-variant-numeric: tabular-nums; color: var(--muted); }
-.fall-area { position: relative; flex: 1; min-height: 30dvh; }
-.fall-area canvas { position: absolute; inset: 0; }
+/* canvas sits directly on top of the piano block — same width, zero gap */
+.learn-canvas-holder { position: relative; flex: 1; min-height: 28dvh; }
+.learn-canvas-holder canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+#learn-piano { margin-top: 0; }
+#learn-piano .piano { margin-top: 0; border-radius: 0 0 .8rem .8rem; }
 
 /* Compose mode */
 .compose-hud { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; padding-bottom: .5rem; }
@@ -132,3 +137,38 @@ dialog {
 dialog::backdrop { background: rgba(0,0,0,.6); }
 dialog select { font: inherit; padding: .3rem; border-radius: .4rem; background: var(--bg2); color: var(--text); border: 1px solid rgba(255,255,255,.15); }
 @media (min-width: 700px) { .piano { height: 300px; } }
+
+/* v2: MIDI box, achievements, toasts, velocity slider */
+.mode-head { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.mode-head .inst-tabs { flex: 1; min-width: 0; }
+.midi-box { flex-shrink: 0; }
+.midi-box select {
+  font: inherit; font-size: .8rem; padding: .3rem .5rem; border-radius: .5rem;
+  background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,.15);
+  max-width: 10em;
+}
+.midi-box .muted { color: var(--muted); font-size: .8rem; }
+
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: .6rem; margin-top: 1.4rem; }
+.ach-grid h2 { grid-column: 1 / -1; font-size: 1rem; color: var(--muted); margin: 0 0 .2rem; }
+.ach-badge {
+  background: var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: .8rem;
+  padding: .7rem .4rem; text-align: center; display: flex; flex-direction: column; gap: .25rem; align-items: center;
+  opacity: .35; filter: grayscale(1);
+}
+.ach-badge.unlocked { opacity: 1; filter: none; border-color: var(--accent); }
+.ach-badge .ico { font-size: 1.6rem; }
+.ach-badge small { font-size: .68rem; color: var(--muted); text-align: center; line-height: 1.2; }
+
+.ach-toast {
+  position: fixed; bottom: 1.2rem; left: 50%; transform: translate(-50%, 150%);
+  background: linear-gradient(90deg, var(--accent), var(--accent2)); color: #fff;
+  padding: .6rem 1.1rem; border-radius: 999px; font-weight: 700; z-index: 100;
+  box-shadow: 0 6px 20px rgba(0,0,0,.4); transition: transform .35s ease;
+  display: flex; align-items: center; gap: .5rem;
+}
+.ach-toast.show { transform: translate(-50%, 0); }
+.ach-toast .big { font-size: 1.3rem; }
+
+.compose-hud input[type=range] { accent-color: var(--accent); }
+

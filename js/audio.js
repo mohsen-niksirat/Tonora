@@ -9,6 +9,16 @@ function noteToFreq(note) {
   return 440 * Math.pow(2, (NOTE_OFFSET[m[1]] + (parseInt(m[2], 10) + 1) * 12 - 69) / 12);
 }
 
+function makeReverbBuffer(ctx) {
+  const len = Math.floor(ctx.sampleRate * 1.8);
+  const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+  }
+  return buf;
+}
+
 class AudioEngine {
   constructor() {
     this.ctx = null;
@@ -24,13 +34,7 @@ class AudioEngine {
       this.master.connect(this.ctx.destination);
       // simple algorithmic reverb (noise impulse)
       this.reverb = this.ctx.createConvolver();
-      const len = this.ctx.sampleRate * 1.8;
-      const buf = this.ctx.createBuffer(2, len, this.ctx.sampleRate);
-      for (let ch = 0; ch < 2; ch++) {
-        const d = buf.getChannelData(ch);
-        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
-      }
-      this.reverb.buffer = buf;
+      this.reverb.buffer = makeReverbBuffer(this.ctx);
       this.reverbGain = this.ctx.createGain();
       this.reverbGain.gain.value = 0.18;
       this.reverb.connect(this.reverbGain);
@@ -43,11 +47,16 @@ class AudioEngine {
   /* Play a note on an instrument definition. dur in seconds (0 = sustain) */
   playNote(instDef, note, dur = 0, vel = 0.8) {
     const ctx = this.ensure();
-    const t = ctx.currentTime;
+    return this.scheduleNote(ctx, this.master, this.reverb, instDef, note, dur, vel, ctx.currentTime);
+  }
+
+  /* Core synthesis — works on any BaseAudioContext (live or offline) */
+  scheduleNote(ctx, master, reverb, instDef, note, dur = 0, vel = 0.8, when = 0) {
+    const t = when;
     const freq = typeof note === 'number' ? note : noteToFreq(note);
     const g = ctx.createGain();
-    g.connect(this.master);
-    g.connect(this.reverb);
+    g.connect(master);
+    if (reverb) g.connect(reverb);
     const a = instDef.adsr || { a: 0.01, d: 0.3, s: 0.5, r: 0.2 };
     const peak = vel * 0.5;
     const end = dur > 0 ? t + dur : t + 1.5;
@@ -103,8 +112,38 @@ class AudioEngine {
         src.start(t); nodes.push(src);
         break;
       }
+      case 'fm': {
+        // FM: carrier + modulator (soft, flute-like)
+        const car = ctx.createOscillator();
+        car.type = 'sine';
+        car.frequency.value = freq;
+        const mod = ctx.createOscillator();
+        mod.type = 'sine';
+        mod.frequency.value = freq * (instDef.ratio || 2);
+        const modGain = ctx.createGain();
+        modGain.gain.value = freq * (instDef.index || 0.4);
+        mod.connect(modGain); modGain.connect(car.frequency);
+        car.connect(g);
+        car.start(t); mod.start(t); nodes.push(car, mod);
+        break;
+      }
+      case 'celesta': {
+        // additive with fast decay + inharmonic partials
+        instDef.partials.forEach((amp, i) => {
+          if (amp < 0.01) return;
+          const o = ctx.createOscillator();
+          o.type = 'sine';
+          o.frequency.value = freq * instDef.ratios[i];
+          const og = ctx.createGain();
+          og.gain.setValueAtTime(amp, t);
+          og.gain.exponentialRampToValueAtTime(0.0001, t + (instDef.decay || 1.2));
+          o.connect(og); og.connect(g);
+          o.start(t); nodes.push(o);
+        });
+        break;
+      }
       case 'drumkit':
-        return this.playDrum(instDef, note, vel);
+        return this.scheduleDrum(ctx, master, reverb, instDef, note, vel, t);
     }
     const stop = end + (a.r || 0.3) + 0.1;
     nodes.forEach(n => { n.stop(stop); });
@@ -113,10 +152,14 @@ class AudioEngine {
 
   playDrum(instDef, padId, vel = 0.9) {
     const ctx = this.ensure();
-    const t = ctx.currentTime;
+    return this.scheduleDrum(ctx, this.master, this.reverb, instDef, padId, vel, ctx.currentTime);
+  }
+
+  scheduleDrum(ctx, master, reverb, instDef, padId, vel, when) {
+    const t = when;
     const g = ctx.createGain();
-    g.connect(this.master);
-    g.connect(this.reverb);
+    g.connect(master);
+    if (reverb) g.connect(reverb);
     const noise = (dur) => {
       const b = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
       const d = b.getChannelData(0);
@@ -142,7 +185,7 @@ class AudioEngine {
         const o = ctx.createOscillator(); o.frequency.value = 180;
         const og = ctx.createGain(); og.gain.setValueAtTime(vel * 0.4, t);
         og.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-        o.connect(og); og.connect(this.master); o.start(t); o.stop(t + 0.12);
+        o.connect(og); og.connect(master); o.start(t); o.stop(t + 0.12);
         break;
       }
       case 'hat': {
@@ -187,3 +230,80 @@ class AudioEngine {
 
 window.TonoraAudio = new AudioEngine();
 window.noteToFreq = noteToFreq;
+
+/* ---- WAV export (OfflineAudioContext render → 16-bit PCM) ---- */
+
+function audioBufferToWav(buffer) {
+  const numCh = buffer.numberOfChannels;
+  const len = buffer.length;
+  const sr = buffer.sampleRate;
+  const bytesPerSample = 2;
+  const blockAlign = numCh * bytesPerSample;
+  const dataSize = len * blockAlign;
+  const ab = new ArrayBuffer(44 + dataSize);
+  const dv = new DataView(ab);
+  const wstr = (off, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(off + i, s.charCodeAt(i)); };
+  wstr(0, 'RIFF');
+  dv.setUint32(4, 36 + dataSize, true);
+  wstr(8, 'WAVE');
+  wstr(12, 'fmt ');
+  dv.setUint32(16, 16, true);
+  dv.setUint16(20, 1, true);          // PCM
+  dv.setUint16(22, numCh, true);
+  dv.setUint32(24, sr, true);
+  dv.setUint32(28, sr * blockAlign, true);
+  dv.setUint16(32, blockAlign, true);
+  dv.setUint16(34, 16, true);
+  wstr(36, 'data');
+  dv.setUint32(40, dataSize, true);
+  const chans = [];
+  for (let c = 0; c < numCh; c++) chans.push(buffer.getChannelData(c));
+  let off = 44;
+  for (let i = 0; i < len; i++) {
+    for (let c = 0; c < numCh; c++) {
+      let v = Math.max(-1, Math.min(1, chans[c][i]));
+      dv.setInt16(off, v < 0 ? v * 0x8000 : v * 0x7FFF, true);
+      off += 2;
+    }
+  }
+  return new Blob([ab], { type: 'audio/wav' });
+}
+
+/* Render a compose-style composition offline and download as WAV */
+async function renderCompositionToWav(tracks, bpm, steps) {
+  const stepDur = 60 / bpm / 4;
+  const totalDur = steps * stepDur + 2.5; // tail for reverb/release
+  const sr = 44100;
+  const off = new OfflineAudioContext(2, Math.ceil(totalDur * sr), sr);
+  const master = off.createGain();
+  master.gain.value = 0.7;
+  master.connect(off.destination);
+  const reverb = off.createConvolver();
+  reverb.buffer = makeReverbBuffer(off);
+  const rg = off.createGain();
+  rg.gain.value = 0.18;
+  reverb.connect(rg); rg.connect(master);
+  const eng = window.TonoraAudio;
+  const inst = id => window.TONORA_INSTRUMENTS.find(i => i.id === id);
+  const vel = (tracks.velocity !== undefined) ? tracks.velocity : 0.8;
+  for (let s = 0; s < steps; s++) {
+    const when = s * stepDur;
+    const mel = tracks.melody[s];
+    if (mel) {
+      const notesArr = Array.isArray(mel) ? mel : [mel];
+      notesArr.forEach(n => eng.scheduleNote(off, master, reverb, inst('piano'), n, stepDur * 2, vel, when));
+    }
+    const bass = tracks.bass[s];
+    if (bass) {
+      const notesArr = Array.isArray(bass) ? bass : [bass];
+      notesArr.forEach(n => eng.scheduleNote(off, master, reverb, inst('synth'), n, stepDur * 3, vel, when));
+    }
+    if (tracks.drums[s]) {
+      eng.scheduleDrum(off, master, reverb, inst('drums'), s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel, when);
+    }
+  }
+  const rendered = await off.startRendering();
+  return audioBufferToWav(rendered);
+}
+window.renderCompositionToWav = renderCompositionToWav;
+
