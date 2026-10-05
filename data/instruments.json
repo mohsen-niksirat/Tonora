@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "instruments": [
+    {
+      "id": "piano",
+      "name": {"en": "Piano", "fa": "پیانو"},
+      "icon": "🎹",
+      "type": "additive",
+      "partials": [1, 0.5, 0.25, 0.12, 0.06],
+      "adsr": {"a": 0.005, "d": 0.6, "s": 0.25, "r": 0.3},
+      "wave": "triangle"
+    },
+    {
+      "id": "guitar",
+      "name": {"en": "Guitar", "fa": "گیتار"},
+      "icon": "🎸",
+      "type": "karplus",
+      "adsr": {"a": 0.001, "d": 1.2, "s": 0.0, "r": 0.2}
+    },
+    {
+      "id": "synth",
+      "name": {"en": "Synth", "fa": "سینت"},
+      "icon": "🌈",
+      "type": "subtractive",
+      "wave": "sawtooth",
+      "adsr": {"a": 0.02, "d": 0.3, "s": 0.6, "r": 0.4},
+      "filter": {"type": "lowpass", "freq": 2500, "q": 1}
+    },
+    {
+      "id": "music-box",
+      "name": {"en": "Music Box", "fa": "جعبه موسیقی"},
+      "icon": "🎵",
+      "type": "additive",
+      "partials": [1, 0.3, 0.1],
+      "adsr": {"a": 0.001, "d": 1.5, "s": 0.0, "r": 0.5},
+      "wave": "sine"
+    },
+    {
+      "id": "drums",
+      "name": {"en": "Drums", "fa": "درام"},
+      "icon": "🥁",
+      "type": "drumkit",
+      "pads": [
+        {"id": "kick",  "name": {"en": "Kick",  "fa": "بیس"},   "key": "Z", "note": null, "color": "#e74c3c"},
+        {"id": "snare", "name": {"en": "Snare", "fa": "اسنر"},  "key": "X", "note": null, "color": "#e67e22"},
+        {"id": "hat",   "name": {"en": "Hat",   "fa": "های‌هت"}, "key": "C", "note": null, "color": "#f1c40f"},
+        {"id": "clap",  "name": {"en": "Clap",  "fa": "دست"},   "key": "V", "note": null, "color": "#2ecc71"},
+        {"id": "tom",   "name": {"en": "Tom",   "fa": "تام"},   "key": "B", "note": null, "color": "#3498db"},
+        {"id": "crash", "name": {"en": "Crash", "fa": "کرس"},   "key": "N", "note": null, "color": "#9b59b6"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,173 @@
+/* Tonora — Compose mode: multi-track step sequencer / piano roll */
+'use strict';
+
+const ComposeMode = {
+  bpm: 120,
+  steps: 32,          // 32 sixteenth steps = 2 bars
+  tracks: {},         // id -> array of {step} sets; melody stores note names
+  playing: false,
+  timer: null,
+  step: 0,
+
+  enter(root) {
+    this.tracks = { melody: new Array(this.steps).fill(null), drums: new Array(this.steps).fill(false), bass: new Array(this.steps).fill(null) };
+    this.loadSaved();
+    root.innerHTML = `
+      <div class="compose-hud">
+        <button class="btn" id="cmp-play">▶</button>
+        <button class="btn" id="cmp-stop">■</button>
+        <label>${t('tempo')}: <input type="number" id="cmp-bpm" min="40" max="240" value="${this.bpm}" style="width:5em"></label>
+        <button class="btn" id="cmp-save">${t('save')}</button>
+        <button class="btn" id="cmp-export">${t('export')}</button>
+        <label class="btn file-btn">${t('import')}<input type="file" id="cmp-import" accept=".json" hidden></label>
+        <button class="btn danger" id="cmp-clear">${t('clear')}</button>
+      </div>
+      <div class="roll-wrap" id="roll"></div>
+    `;
+    root.querySelector('#cmp-play').onclick = () => this.togglePlay();
+    root.querySelector('#cmp-stop').onclick = () => this.stop();
+    root.querySelector('#cmp-bpm').onchange = e => { this.bpm = +e.target.value || 120; };
+    root.querySelector('#cmp-save').onclick = () => this.save();
+    root.querySelector('#cmp-export').onclick = () => this.exportSong();
+    root.querySelector('#cmp-import').onchange = e => this.importSong(e.target.files[0]);
+    root.querySelector('#cmp-clear').onclick = () => { this.tracks = { melody: new Array(this.steps).fill(null), drums: new Array(this.steps).fill(false), bass: new Array(this.steps).fill(null) }; this.buildRoll(); };
+    this.buildRoll();
+  },
+
+  loadSaved() {
+    try {
+      const raw = localStorage.getItem('tonora-compose');
+      if (raw) { const d = JSON.parse(raw); if (d.tracks) { this.tracks = d.tracks; this.bpm = d.bpm || 120; } }
+    } catch (e) {}
+  },
+
+  buildRoll() {
+    const roll = document.getElementById('roll');
+    roll.innerHTML = '';
+    const notes = ['C5','B4','A4','G4','F4','E4','D4','C4']; // melody rows
+    const bassNotes = ['C3','A2','F2','G2'];
+    const mkRow = (label, cells) => {
+      const row = document.createElement('div');
+      row.className = 'roll-row';
+      const lab = document.createElement('div');
+      lab.className = 'roll-label';
+      lab.textContent = label;
+      row.appendChild(lab);
+      cells.forEach((cell) => row.appendChild(cell));
+      roll.appendChild(row);
+    };
+    const mkCell = (cls, on, cb, text='') => {
+      const c = document.createElement('button');
+      c.className = 'roll-cell ' + cls + (on ? ' on' : '');
+      if (text) c.textContent = text;
+      c.onclick = cb;
+      return c;
+    };
+    // melody rows
+    notes.forEach(n => {
+      const cells = this.tracks.melody.map((v, s) =>
+        mkCell('mel', v === n, () => {
+          this.tracks.melody[s] = (this.tracks.melody[s] === n ? null : n);
+          this.buildRoll();
+          if (this.tracks.melody[s]) window.TonoraAudio.playNote(this.inst('piano'), n, 0.3);
+        }));
+      mkRow(n, cells);
+    });
+    // drums row
+    const drumDefs = window.TONORA_INSTRUMENTS.find(i => i.id === 'drums');
+    const dcells = this.tracks.drums.map((v, s) =>
+      mkCell('drm', v, () => {
+        this.tracks.drums[s] = !this.tracks.drums[s];
+        this.buildRoll();
+        if (this.tracks.drums[s]) window.TonoraAudio.playDrum(drumDefs, 'kick', 0.9);
+      }, '🥁'));
+    mkRow(t('drums'), dcells);
+    // bass rows
+    bassNotes.forEach(n => {
+      const cells = this.tracks.bass.map((v, s) =>
+        mkCell('bass', v === n, () => {
+          this.tracks.bass[s] = (this.tracks.bass[s] === n ? null : n);
+          this.buildRoll();
+          if (this.tracks.bass[s]) window.TonoraAudio.playNote(this.inst('synth'), n, 0.3);
+        }));
+      mkRow(n, cells);
+    });
+  },
+
+  inst(id) { return window.TONORA_INSTRUMENTS.find(i => i.id === id); },
+
+  stepDur() { return 60 / this.bpm / 4; }, // sixteenth
+
+  togglePlay() { this.playing ? this.stop() : this.start(); },
+
+  start() {
+    window.TonoraAudio.ensure();
+    this.playing = true;
+    this.step = 0;
+    const tick = () => {
+      if (!this.playing) return;
+      this.playStep(this.step);
+      // visual column
+      document.querySelectorAll('.roll-cell.cur').forEach(c => c.classList.remove('cur'));
+      const s = this.step;
+      document.querySelectorAll('.roll-row').forEach(row => {
+        const cell = row.children[1 + s];
+        if (cell) cell.classList.add('cur');
+      });
+      this.step = (this.step + 1) % this.steps;
+      this.timer = setTimeout(tick, this.stepDur() * 1000);
+    };
+    tick();
+  },
+
+  playStep(s) {
+    const m = this.tracks.melody[s];
+    if (m) window.TonoraAudio.playNote(this.inst('piano'), m, this.stepDur() * 2);
+    const b = this.tracks.bass[s];
+    if (b) window.TonoraAudio.playNote(this.inst('synth'), b, this.stepDur() * 3);
+    if (this.tracks.drums[s]) {
+      const d = this.inst('drums');
+      window.TonoraAudio.playDrum(d, s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'));
+    }
+  },
+
+  stop() {
+    this.playing = false;
+    clearTimeout(this.timer);
+    document.querySelectorAll('.roll-cell.cur').forEach(c => c.classList.remove('cur'));
+  },
+
+  save() {
+    localStorage.setItem('tonora-compose', JSON.stringify({ bpm: this.bpm, tracks: this.tracks }));
+    const b = document.getElementById('cmp-save');
+    b.textContent = '✓';
+    setTimeout(() => b.textContent = t('save'), 1200);
+  },
+
+  exportSong() {
+    const data = JSON.stringify({ app: 'tonora', type: 'song', bpm: this.bpm, tracks: this.tracks }, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'tonora-song.json';
+    a.click();
+  },
+
+  importSong(file) {
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const d = JSON.parse(r.result);
+        if (d.type === 'song' && d.tracks) {
+          this.tracks = d.tracks; this.bpm = d.bpm || 120;
+          document.getElementById('cmp-bpm').value = this.bpm;
+          this.buildRoll();
+        }
+      } catch (e) { alert('Invalid file'); }
+    };
+    r.readAsText(file);
+  },
+
+  leave() { this.stop(); this.save(); }
+};

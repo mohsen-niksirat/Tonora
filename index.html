@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0f1220">
+<meta name="description" content="Tonora — play instruments, learn songs, compose music. All in your browser.">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<title>Tonora 🎹</title>
+<link rel="stylesheet" href="css/style.css?v=2">
+</head>
+<body>
+<header>
+  <span class="logo">Tonora</span>
+  <nav class="mode-tabs" id="mode-tabs"></nav>
+  <button class="icon-btn" id="theme-btn" title="Theme">🌓</button>
+  <button class="icon-btn" id="lang-btn" title="Language">🌐</button>
+</header>
+<main id="app"></main>
+
+<script src="js/i18n.js?v=2"></script>
+<script src="js/audio.js?v=2"></script>
+<script src="js/piano.js?v=2"></script>
+<script src="js/play.js?v=2"></script>
+<script src="js/learn.js?v=2"></script>
+<script src="js/compose.js?v=2"></script>
+<script>
+'use strict';
+window.__jsErrors = [];
+window.addEventListener('error', e => window.__jsErrors.push(e.message));
+window.addEventListener('unhandledrejection', e => window.__jsErrors.push(String(e.reason)));
+
+let INSTRUMENTS = [], SONGS = [];
+
+async function loadData() {
+  const [i, s] = await Promise.all([
+    fetch('data/instruments.json?v=2').then(r => r.json()),
+    fetch('data/songs.json?v=2').then(r => r.json())
+  ]);
+  INSTRUMENTS = i.instruments;
+  SONGS = s.songs;
+  window.TONORA_INSTRUMENTS = INSTRUMENTS;
+  window.TONORA_SONGS = SONGS;
+}
+
+const MODES = [
+  { id: 'home', icon: '🏠' },
+  { id: 'play', icon: '🎹' },
+  { id: 'learn', icon: '🎓' },
+  { id: 'compose', icon: '🎛️' }
+];
+
+let currentMode = 'home';
+
+function renderTabs() {
+  const tabs = document.getElementById('mode-tabs');
+  tabs.innerHTML = '';
+  MODES.forEach(m => {
+    const b = document.createElement('button');
+    b.className = 'mode-tab' + (m.id === currentMode ? ' active' : '');
+    b.dataset.mode = m.id;
+    b.innerHTML = `<span>${m.icon}</span> ${t(m.id)}`;
+    b.onclick = () => switchMode(m.id);
+    tabs.appendChild(b);
+  });
+}
+
+function switchMode(id) {
+  const app = document.getElementById('app');
+  // teardown
+  if (currentMode === 'play') PlayMode.leave();
+  if (currentMode === 'learn') LearnMode.leave();
+  if (currentMode === 'compose') ComposeMode.leave();
+  currentMode = id;
+  renderTabs();
+  if (id === 'home') renderHome(app);
+  if (id === 'play') PlayMode.enter(app);
+  if (id === 'learn') LearnMode.enter(app);
+  if (id === 'compose') ComposeMode.enter(app);
+}
+
+function renderHome(app) {
+  app.innerHTML = `
+    <div class="home-hero">
+      <h1>🎹 Tonora</h1>
+      <p>Play · Learn · Compose — all in your browser</p>
+    </div>
+    <div class="mode-cards">
+      <button class="mode-card" data-go="play"><span class="big">🎹</span><strong>${t('play')}</strong></button>
+      <button class="mode-card" data-go="learn"><span class="big">🎓</span><strong>${t('learn')}</strong></button>
+      <button class="mode-card" data-go="compose"><span class="big">🎛️</span><strong>${t('compose')}</strong></button>
+    </div>`;
+  app.querySelectorAll('[data-go]').forEach(b => b.onclick = () => switchMode(b.dataset.go));
+}
+
+function applyLangUI() {
+  setLang(getLang());
+  renderTabs();
+  switchMode(currentMode);
+  document.getElementById('lang-btn').textContent = getLang() === 'fa' ? '🌐 EN' : '🌐 FA';
+}
+
+document.getElementById('lang-btn').onclick = () => {
+  applyLangUI._l = getLang() === 'fa' ? 'en' : 'fa';
+  localStorage.setItem('tonora-lang', applyLangUI._l);
+  location.reload();
+};
+document.getElementById('theme-btn').onclick = () => {
+  const h = document.documentElement;
+  h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('tonora-theme', h.dataset.theme);
+  document.querySelector('meta[name=theme-color]').content = h.dataset.theme === 'dark' ? '#0f1220' : '#f2f4fb';
+};
+const savedTheme = localStorage.getItem('tonora-theme');
+if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+
+// PWA
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+loadData().then(() => {
+  document.documentElement.lang = getLang();
+  document.documentElement.dir = getLang() === 'fa' ? 'rtl' : 'ltr';
+  renderTabs();
+  switchMode('home');
+});
+</script>
+</body>
+</html>

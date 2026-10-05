@@ -1,0 +1,14 @@
+{
+  "name": "Tonora — Play, Learn, Compose",
+  "short_name": "Tonora",
+  "description": "Play instruments, learn famous songs, and compose music — entirely in your browser.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f1220",
+  "theme_color": "#0f1220",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
