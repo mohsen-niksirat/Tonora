@@ -137,15 +137,16 @@ const ComposeMode = {
     window.TonoraAudio.ensure();
     this.playing = true;
     this.step = 0;
+    // cache row elements once — no per-tick DOM queries, no O(rows²) clearing
+    const rows = [...document.querySelectorAll('.roll-row')];
+    let prevCells = [];
     const tick = () => {
       if (!this.playing) return;
       this.playStep(this.step);
       const s = this.step;
-      document.querySelectorAll('.roll-row').forEach(row => {
-        document.querySelectorAll('.roll-cell.cur').forEach(c => c.classList.remove('cur'));
-        const cell = row.children[1 + s];
-        if (cell) cell.classList.add('cur');
-      });
+      prevCells.forEach(c => c.classList.remove('cur'));
+      prevCells = rows.map(row => row.children[1 + s]).filter(Boolean);
+      prevCells.forEach(c => c.classList.add('cur'));
       this.step = (this.step + 1) % this.steps;
       this.timer = setTimeout(tick, this.stepDur() * 1000);
     };

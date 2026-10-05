@@ -11,6 +11,7 @@ const I18N = {
     clear: 'Clear', track: 'Track', melody: 'Melody', drums: 'Drums', bass: 'Bass',
     settings: 'Settings', language: 'Language', theme: 'Theme', dark: 'Dark', light: 'Light',
     home: 'Home', wait: 'Get ready…', tapStart: 'Tap to start', loading: 'Loading…',
+    audioPaused: 'Audio is paused by the browser — click anywhere to start it',
     // v2
     metronome: 'Metronome', speed: 'Speed', repeatAB: 'A–B repeat', next8: 'Repeat next 8',
     repeatOn: 'Loop on', repeatOff: 'Loop off',
@@ -33,6 +34,7 @@ const I18N = {
     clear: 'پاک کردن', track: 'تراک', melody: 'ملودی', drums: 'درام', bass: 'بیس',
     settings: 'تنظیمات', language: 'زبان', theme: 'پوسته', dark: 'تیره', light: 'روشن',
     home: 'خانه', wait: 'آماده شو…', tapStart: 'برای شروع بزن', loading: 'در حال بارگذاری…',
+    audioPaused: 'صدا توسط مرورگر متوقف شده — برای شروع جایی کلیک کن',
     // v2
     metronome: 'مترونوم', speed: 'سرعت', repeatAB: 'تکرار A–B', next8: 'تکرار ۸ نت بعدی',
     repeatOn: 'حلقه روشن', repeatOff: 'حلقه خاموش',

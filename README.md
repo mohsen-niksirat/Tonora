@@ -20,6 +20,14 @@ Tonora is a client-side music studio: play virtual instruments, learn famous son
 - 📱 Installable PWA — works fully offline.
 - 🔊 100% Web Audio synthesis — zero audio files, tiny payload.
 
+## Changelog
+
+### v2.1 — audio stability & performance
+- 🔧 **Fixed the Guitar voice** — the old Karplus–Strong loop could self-oscillate (harsh metallic ring) and take down all app audio. Now a proper plucked string: lowpass-filtered noise seed, Q = 0.5 damping filter, 0.992 feedback → warm pluck that decays in ~2–4 s.
+- 🔊 **Audio auto-revival** — Chrome can suspend the AudioContext mid-session (autoplay policy). A document-level gesture listener (re-armed on every mode switch) resumes it on the next click/keypress; if audio is requested while suspended, a toast appears ("click anywhere to start audio") instead of silent death. Context state changes log to `console.debug`.
+- ⚡ **Perf** — Learn mode caches piano-key geometry (no per-frame layout thrash); Compose playback highlights the step column in O(1) DOM work instead of clearing the whole grid each tick.
+- 🥁 **MIDI drums** — only GM drum notes 36–47 map onto pads; other notes are ignored instead of wrapping around.
+
 ## Adding content (no code needed)
 Content is data-driven — just edit the JSON files:
 

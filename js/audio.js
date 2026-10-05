@@ -24,6 +24,7 @@ class AudioEngine {
     this.ctx = null;
     this.master = null;
     this.reverb = null;
+    this._reviving = false;
   }
 
   ensure() {
@@ -39,14 +40,58 @@ class AudioEngine {
       this.reverbGain.gain.value = 0.18;
       this.reverb.connect(this.reverbGain);
       this.reverbGain.connect(this.master);
+      // track context state for debugging + revival UX
+      this.ctx.onstatechange = () => {
+        console.debug('[Tonora] AudioContext state →', this.ctx.state);
+        if (this.ctx.state === 'suspended') this.showPausedToast();
+      };
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
     return this.ctx;
   }
 
+  /* Revive a suspended context; returns true when audio is running. */
+  async revive() {
+    if (!this.ctx) { this.ensure(); return this.ctx.state === 'running'; }
+    if (this.ctx.state === 'running') return true;
+    try {
+      await this.ctx.resume();
+      console.debug('[Tonora] revive() →', this.ctx.state);
+    } catch (e) {
+      console.debug('[Tonora] revive() rejected:', e && e.message);
+    }
+    return this.ctx.state === 'running';
+  }
+
+  showPausedToast() {
+    if (this._reviving) return;
+    this._reviving = true;
+    const toast = document.createElement('div');
+    toast.className = 'ach-toast';
+    toast.innerHTML = `<span class="big">🔇</span> ${t('audioPaused')}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 30);
+    const dismiss = () => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 400);
+      this._reviving = false;
+    };
+    setTimeout(dismiss, 4000);
+    this._toastDismiss = dismiss;
+  }
+
+  /* Called by note entry points; schedules anyway but warns when muted. */
+  guard() {
+    if (this.ctx && this.ctx.state !== 'running') {
+      this.ctx.resume().catch(() => {});
+      if (this.ctx.state !== 'running') this.showPausedToast();
+    }
+  }
+
   /* Play a note on an instrument definition. dur in seconds (0 = sustain) */
   playNote(instDef, note, dur = 0, vel = 0.8) {
     const ctx = this.ensure();
+    this.guard();
     return this.scheduleNote(ctx, this.master, this.reverb, instDef, note, dur, vel, ctx.currentTime);
   }
 
@@ -60,14 +105,8 @@ class AudioEngine {
     const a = instDef.adsr || { a: 0.01, d: 0.3, s: 0.5, r: 0.2 };
     const peak = vel * 0.5;
     const end = dur > 0 ? t + dur : t + 1.5;
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(peak, t + a.a);
-    g.gain.exponentialRampToValueAtTime(Math.max(peak * a.s, 0.0001), t + a.a + a.d);
-    if (dur > 0) {
-      g.gain.setValueAtTime(Math.max(peak * a.s, 0.0001), Math.max(end - a.r, t + a.a + a.d));
-      g.gain.exponentialRampToValueAtTime(0.0001, end);
-    }
 
+    let naturalDur = 0;   // >0 when the source buffer carries its own decay
     const nodes = [];
     switch (instDef.type) {
       case 'additive': {
@@ -96,20 +135,47 @@ class AudioEngine {
         break;
       }
       case 'karplus': {
-        // plucked string approximation via filtered noise burst
+        // Karplus–Strong plucked string, rendered sample-by-sample into a buffer.
+        // We deliberately do NOT build a Web Audio feedback cycle
+        // (src → filter → gain → filter): in the spec a cycle is only
+        // well-defined when it contains a DelayNode, and in practice Chrome
+        // emits NaN for this topology — the NaN poisons the master bus and
+        // silences the ENTIRE app until reload. Pre-rendering the decaying
+        // string is deterministic and identical in live and offline contexts.
         const sr = ctx.sampleRate;
-        const bufLen = Math.round(sr / freq);
-        const buf = ctx.createBuffer(1, bufLen, sr);
-        const d = buf.getChannelData(0);
-        for (let i = 0; i < bufLen; i++) d[i] = Math.random() * 2 - 1;
+        const N = Math.max(2, Math.round(sr / freq));     // string period
+        const durSec = instDef.dur || 3.0;
+        const total = Math.max(N + 1, Math.floor(sr * durSec));
+        const buf = ctx.createBuffer(1, total, sr);
+        const out = buf.getChannelData(0);
+        // 1) seed = white noise through a one-pole lowpass (no metallic snap)
+        const ring = new Float32Array(N);
+        let lp = 0;
+        for (let i = 0; i < N; i++) {
+          const w = Math.random() * 2 - 1;
+          lp += 0.5 * (w - lp);
+          ring[i] = lp;
+        }
+        // 2) feed the delay line its own averaged output each step — the
+        //    two-point average is the damping lowpass of the classic algorithm
+        const damp = instDef.damping || 0.9965;
+        let ptr = 0;
+        for (let n = 0; n < total; n++) {
+          const cur = ring[ptr];
+          out[n] = cur;
+          const nxt = ring[(ptr + 1) % N];
+          ring[ptr] = 0.5 * (cur + nxt) * damp;
+          ptr = (ptr + 1) % N;
+        }
+        // 3) short attack fade to avoid a click on the first sample
+        const fade = Math.min(64, Math.floor(sr * 0.002));
+        for (let i = 0; i < fade; i++) out[i] *= i / fade;
         const src = ctx.createBufferSource();
-        src.buffer = buf; src.loop = true;
-        const fb = ctx.createGain(); fb.gain.value = 0.985;
-        const filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 5000;
-        src.connect(filt); filt.connect(fb); fb.connect(filt);
-        const out = ctx.createGain(); out.gain.value = 1;
-        fb.connect(out); out.connect(g);
-        src.start(t); nodes.push(src);
+        src.buffer = buf;
+        src.connect(g);
+        src.start(t);
+        nodes.push(src);
+        naturalDur = durSec;
         break;
       }
       case 'fm': {
@@ -146,12 +212,31 @@ class AudioEngine {
         return this.scheduleDrum(ctx, master, reverb, instDef, note, vel, t);
     }
     const stop = end + (a.r || 0.3) + 0.1;
+    // Envelope: karplus buffers already contain their own pluck decay, so we
+    // only apply attack/release shaping — no sustain hold that would truncate
+    // or re-lengthen the natural string decay.
+    if (naturalDur > 0) {
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + Math.max(a.a, 0.001));
+      g.gain.setValueAtTime(peak, t + naturalDur);
+      g.gain.linearRampToValueAtTime(0.0001, t + naturalDur + 0.05);
+      nodes.forEach(n => { n.stop(t + naturalDur + 0.1); });
+      return { stop: () => { try { g.gain.cancelScheduledValues(ctx.currentTime); g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.05); nodes.forEach(n => n.stop(ctx.currentTime + 0.3)); } catch (e) {} } };
+    }
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + a.a);
+    g.gain.exponentialRampToValueAtTime(Math.max(peak * a.s, 0.0001), t + a.a + a.d);
+    if (dur > 0) {
+      g.gain.setValueAtTime(Math.max(peak * a.s, 0.0001), Math.max(end - a.r, t + a.a + a.d));
+      g.gain.exponentialRampToValueAtTime(0.0001, end);
+    }
     nodes.forEach(n => { n.stop(stop); });
     return { stop: () => { try { g.gain.cancelScheduledValues(ctx.currentTime); g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.05); nodes.forEach(n => n.stop(ctx.currentTime + 0.3)); } catch (e) {} } };
   }
 
   playDrum(instDef, padId, vel = 0.9) {
     const ctx = this.ensure();
+    this.guard();
     return this.scheduleDrum(ctx, this.master, this.reverb, instDef, padId, vel, ctx.currentTime);
   }
 
@@ -230,6 +315,27 @@ class AudioEngine {
 
 window.TonoraAudio = new AudioEngine();
 window.noteToFreq = noteToFreq;
+
+/* ---- Audio auto-revival ----
+   A single document-level gesture listener that un-suspends the AudioContext.
+   Re-armed after every mode switch (mode entry points call armAudioRevive()),
+   so a context that Chrome suspended mid-session recovers on the next click/key
+   instead of staying silent until a full page refresh. */
+function armAudioRevive() {
+  if (window._tonoraReviveOff) window._tonoraReviveOff();
+  const handler = () => {
+    const engine = window.TonoraAudio;
+    if (!engine.ctx) return;              // nothing to revive yet
+    engine.revive().then(ok => {
+      if (ok && window._tonoraReviveOff) { window._tonoraReviveOff(); window._tonoraReviveOff = null; }
+    });
+  };
+  const evs = ['pointerdown', 'keydown', 'touchstart'];
+  evs.forEach(e => document.addEventListener(e, handler, { passive: true }));
+  window._tonoraReviveOff = () => evs.forEach(e => document.removeEventListener(e, handler));
+}
+window.armAudioRevive = armAudioRevive;
+
 
 /* ---- WAV export (OfflineAudioContext render → 16-bit PCM) ---- */
 

@@ -7,7 +7,13 @@ const PlayMode = {
   current: 'piano',
   midi: null,        // {access, input}
 
+  /* (re)arm the document-level audio revival listeners */
+  armRevive() {
+    if (typeof window.armAudioRevive === 'function') window.armAudioRevive();
+  },
+
   enter(root) {
+    this.armRevive();
     root.innerHTML = `
       <div class="mode-head">
         <div class="inst-tabs" id="inst-tabs"></div>
@@ -64,6 +70,7 @@ const PlayMode = {
       });
       // resume audio context on first interaction (autoplay policy)
       document.body.addEventListener('pointerdown', () => window.TonoraAudio.ensure(), { once: true });
+      this.armRevive();
     }
   },
 
@@ -106,11 +113,14 @@ const PlayMode = {
       const name = this.midiNoteName(note);
       if (cmd === 0x90 && vel > 0) {
         if (this.current === 'drums') {
+          // only map the GM drum range (36–47) onto pads; ignore the rest
+          if (note < 36 || note > 47) return;
           const inst = window.TONORA_INSTRUMENTS.find(i => i.id === 'drums');
           const pads = inst.pads;
-          window.TonoraAudio.playDrum(inst, pads[note % pads.length].id, Math.max(0.4, vel / 127));
+          const padIdx = (note - 36) % pads.length;
+          window.TonoraAudio.playDrum(inst, pads[padIdx].id, Math.max(0.4, vel / 127));
           const padEls = document.querySelectorAll('.drum-pad');
-          const el = padEls[note % pads.length];
+          const el = padEls[padIdx];
           if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 120); }
         } else if (this.piano) {
           window.TonoraAudio.playNote(this.inst(this.current), name, 0, Math.max(0.4, vel / 127));

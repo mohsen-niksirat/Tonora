@@ -149,15 +149,32 @@ const LearnMode = {
       cv.style.width = w + 'px';
       cv.style.height = holder.clientHeight + 'px';
       cv.style.left = '0px';
-      // horizontal offset of piano inside its container (RTL-safe)
-      const pr = pianoEl.getBoundingClientRect();
-      const hr = holder.getBoundingClientRect();
-      this._pianoOffsetX = (pr.left - hr.left) * devicePixelRatio;
+      // cache per-note horizontal geometry once (avoid per-frame layout thrash)
+      this.measureKeys();
     };
     size();
     this.ctx2d = cv.getContext('2d');
-    this._onResize = () => { if (this.running) size(); };
+    this._measureRaf = 0;
+    this._onResize = () => {
+      if (!this.running) return;
+      cancelAnimationFrame(this._measureRaf);
+      this._measureRaf = requestAnimationFrame(size);
+    };
     window.addEventListener('resize', this._onResize);
+  },
+
+  /* Snapshot every key's x/width relative to the canvas, in device pixels. */
+  measureKeys() {
+    if (!this.piano) return;
+    const holder = document.getElementById('learn-canvas-holder');
+    const hr = holder.getBoundingClientRect();
+    const dpr = devicePixelRatio;
+    const m = {};
+    for (const note in this.piano.keys) {
+      const kr = this.piano.keys[note].getBoundingClientRect();
+      m[note] = { x: (kr.left - hr.left) * dpr, w: kr.width * dpr };
+    }
+    this._keyRects = m;
   },
 
   setStatus(s) { document.getElementById('learn-status').textContent = s; },
@@ -245,14 +262,9 @@ const LearnMode = {
       const target = this.startTime + n.t * spb * 1000;
       const y = H - ((target - now) / lookAhead) * H;
       if (y < -50 || y > H + 50) return;
-      const el = this.piano.keys[n.n];
-      if (!el) return;
-      // horizontal position: piano's own offset within page, minus canvas holder's page offset
-      const kr = el.getBoundingClientRect();
-      const holder = document.getElementById('learn-canvas-holder');
-      const hr = holder.getBoundingClientRect();
-      const x = (kr.left - hr.left) * dpr;
-      const w = kr.width * dpr;
+      const rect = this._keyRects && this._keyRects[n.n];
+      if (!rect) return;
+      const x = rect.x, w = rect.w;
       const hit = this.hitIdx.has(i);
       c.fillStyle = hit ? 'rgba(120,220,150,0.9)' : 'rgba(120,170,255,0.9)';
       const h = Math.max(n.d * spb * 1000 / lookAhead * H * 0.4, 14 * dpr);
@@ -267,6 +279,7 @@ const LearnMode = {
   stop() {
     this.running = false;
     cancelAnimationFrame(this.raf);
+    cancelAnimationFrame(this._measureRaf);
     clearTimeout(this._listenTimer);
     if (this._onResize) { window.removeEventListener('resize', this._onResize); this._onResize = null; }
     if (this.piano) { this.piano.destroy(); this.piano = null; }
