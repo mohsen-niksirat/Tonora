@@ -1,5 +1,5 @@
 /* Tonora service worker — offline-first */
-const CACHE = 'tonora-v3';
+const CACHE = 'tonora-v4';
 const ASSETS = [
   './', './index.html', './manifest.json',
   './css/style.css?v=4',

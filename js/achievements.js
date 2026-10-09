@@ -47,8 +47,9 @@ const TonoraAchievements = {
     localStorage.setItem('tonora-days', JSON.stringify(days));
     if (days.length === 3) {
       const d1 = new Date(days[0]), d2 = new Date(days[1]), d3 = new Date(days[2]);
-      const ok = (d2 - d1 === 86400000) && (d3 - d2 === 86400000);
-      if (ok) this.unlock('streak3');
+      const diff1 = Math.round((d2 - d1) / 86400000);
+      const diff2 = Math.round((d3 - d2) / 86400000);
+      if (diff1 === 1 && diff2 === 1) this.unlock('streak3');
     }
   },
 

@@ -35,8 +35,10 @@ const LearnMode = {
       const card = document.createElement('button');
       card.className = 'song-card';
       const stars = '★'.repeat(song.difficulty) + '☆'.repeat(3 - song.difficulty);
+      const best = localStorage.getItem('tonora-score-' + song.id);
+      const bestText = best ? ` · 🏆 ${best}` : '';
       card.innerHTML = `<strong>${song.title[getLang()] || song.title.en}</strong>
-        <small>${song.composer} · ${t('level')} ${stars}</small>`;
+        <small>${song.composer} · ${t('level')} ${stars}${bestText}</small>`;
       card.onclick = () => this.start(song);
       list.appendChild(card);
     });
@@ -91,6 +93,8 @@ const LearnMode = {
     this.running = true;
     this.score = 0; this.combo = 0;
     this.phase = 'listen';
+    this._listenTimers = [];
+    this._scheduledVoices = [];
     document.getElementById('song-list').classList.add('hidden');
     document.getElementById('learn-stage').classList.remove('hidden');
     const surf = document.getElementById('learn-piano');
@@ -100,15 +104,37 @@ const LearnMode = {
     this.setupCanvas();
     this.setStatus(t('listen'));
     const spb = 60 / song.bpm / this.speed;
-    const t0 = window.TonoraAudio.ensure().currentTime + 0.5;
+    const ctx = window.TonoraAudio.ensure();
+    const t0 = ctx.currentTime + 0.5;
+
+    // Schedule each note to play at its correct future timestamp
     song.notes.forEach(n => {
-      window.TonoraAudio.playNote(inst, n.n, n.d * spb * 0.9);
-      setTimeout(() => { if (this.running) this.piano.flash(n.n); }, (t0 - window.TonoraAudio.ctx.currentTime + n.t * spb) * 1000);
+      const voice = window.TonoraAudio.scheduleNote(
+        ctx,
+        window.TonoraAudio.master,
+        window.TonoraAudio.reverb,
+        inst,
+        n.n,
+        n.d * spb * 0.9,
+        0.8,
+        t0 + n.t * spb
+      );
+      if (voice) this._scheduledVoices.push(voice);
+      const delayMs = (0.5 + n.t * spb) * 1000;
+      const tid = setTimeout(() => {
+        if (this.running && this.phase === 'listen') this.piano.flash(n.n);
+      }, delayMs);
+      this._listenTimers.push(tid);
     });
-    // metronome clicks during listen
+
+    // Metronome clicks during listen phase
     const totalBeats = Math.ceil((song.notes[song.notes.length - 1].t + song.notes[song.notes.length - 1].d) / 1) + 2;
     for (let b = 0; b < totalBeats; b++) {
-      setTimeout(() => { if (this.running && this.metronome) this.click(b % 4 === 0); }, (t0 - window.TonoraAudio.ctx.currentTime + b * spb) * 1000);
+      const delayMs = (0.5 + b * spb) * 1000;
+      const tid = setTimeout(() => {
+        if (this.running && this.phase === 'listen' && this.metronome) this.click(b % 4 === 0);
+      }, delayMs);
+      this._listenTimers.push(tid);
     }
     const listenDur = (song.notes[song.notes.length - 1].t + song.notes[song.notes.length - 1].d) * spb * 1000 + 800;
     this._listenTimer = setTimeout(() => { if (this.running) this.beginPlay(spb); }, listenDur);
@@ -218,7 +244,11 @@ const LearnMode = {
         for (let i = this.repeat.startIdx; i < total; i++) this.hitIdx.delete(i);
         this.setStatus(`🔁 ${t('repeatOn')}`);
       } else {
-        this.setStatus(`🎉 ${this.score}`);
+        const savedBest = +localStorage.getItem('tonora-score-' + this.song.id) || 0;
+        if (this.score > savedBest) {
+          localStorage.setItem('tonora-score-' + this.song.id, this.score);
+        }
+        this.setStatus(`🎉 ${t('score')}: ${this.score}`);
         this.phase = 'done';
         TonoraAchievements.unlock('first_song');
       }
@@ -281,6 +311,14 @@ const LearnMode = {
     cancelAnimationFrame(this.raf);
     cancelAnimationFrame(this._measureRaf);
     clearTimeout(this._listenTimer);
+    if (this._listenTimers) {
+      this._listenTimers.forEach(t => clearTimeout(t));
+      this._listenTimers = [];
+    }
+    if (this._scheduledVoices) {
+      this._scheduledVoices.forEach(v => { try { if (v && v.stop) v.stop(); } catch (e) {} });
+      this._scheduledVoices = [];
+    }
     if (this._onResize) { window.removeEventListener('resize', this._onResize); this._onResize = null; }
     if (this.piano) { this.piano.destroy(); this.piano = null; }
     const btn = document.getElementById('learn-ab');

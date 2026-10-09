@@ -129,6 +129,7 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 loadData().then(() => {
   document.documentElement.lang = getLang();
   document.documentElement.dir = getLang() === 'fa' ? 'rtl' : 'ltr';
+  document.getElementById('lang-btn').textContent = getLang() === 'fa' ? '🌐 EN' : '🌐 FA';
   renderTabs();
   switchMode('home');
 });

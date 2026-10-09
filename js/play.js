@@ -7,6 +7,10 @@ const PlayMode = {
   current: 'piano',
   midi: null,        // {access, input}
 
+  inst(id) {
+    return window.TONORA_INSTRUMENTS.find(i => i.id === id);
+  },
+
   /* (re)arm the document-level audio revival listeners */
   armRevive() {
     if (typeof window.armAudioRevive === 'function') window.armAudioRevive();

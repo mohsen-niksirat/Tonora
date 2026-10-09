@@ -88,11 +88,12 @@ class AudioEngine {
     }
   }
 
-  /* Play a note on an instrument definition. dur in seconds (0 = sustain) */
-  playNote(instDef, note, dur = 0, vel = 0.8) {
+  /* Play a note on an instrument definition. dur in seconds (0 = sustain), optional when */
+  playNote(instDef, note, dur = 0, vel = 0.8, when = 0) {
     const ctx = this.ensure();
     this.guard();
-    return this.scheduleNote(ctx, this.master, this.reverb, instDef, note, dur, vel, ctx.currentTime);
+    const t = when > 0 ? when : ctx.currentTime;
+    return this.scheduleNote(ctx, this.master, this.reverb, instDef, note, dur, vel, t);
   }
 
   /* Core synthesis — works on any BaseAudioContext (live or offline) */
@@ -234,10 +235,11 @@ class AudioEngine {
     return { stop: () => { try { g.gain.cancelScheduledValues(ctx.currentTime); g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.05); nodes.forEach(n => n.stop(ctx.currentTime + 0.3)); } catch (e) {} } };
   }
 
-  playDrum(instDef, padId, vel = 0.9) {
+  playDrum(instDef, padId, vel = 0.9, when = 0) {
     const ctx = this.ensure();
     this.guard();
-    return this.scheduleDrum(ctx, this.master, this.reverb, instDef, padId, vel, ctx.currentTime);
+    const t = when > 0 ? when : ctx.currentTime;
+    return this.scheduleDrum(ctx, this.master, this.reverb, instDef, padId, vel, t);
   }
 
   scheduleDrum(ctx, master, reverb, instDef, padId, vel, when) {

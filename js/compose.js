@@ -137,6 +137,8 @@ const ComposeMode = {
     window.TonoraAudio.ensure();
     this.playing = true;
     this.step = 0;
+    const playBtn = document.getElementById('cmp-play');
+    if (playBtn) { playBtn.classList.add('primary'); playBtn.textContent = '⏸'; }
     // cache row elements once — no per-tick DOM queries, no O(rows²) clearing
     const rows = [...document.querySelectorAll('.roll-row')];
     let prevCells = [];
@@ -170,6 +172,8 @@ const ComposeMode = {
   stop() {
     this.playing = false;
     clearTimeout(this.timer);
+    const playBtn = document.getElementById('cmp-play');
+    if (playBtn) { playBtn.classList.remove('primary'); playBtn.textContent = '▶'; }
     document.querySelectorAll('.roll-cell.cur').forEach(c => c.classList.remove('cur'));
   },
 

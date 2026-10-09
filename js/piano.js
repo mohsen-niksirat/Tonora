@@ -1,12 +1,20 @@
 /* Tonora — Piano keyboard UI (touch/mouse/PC keyboard) */
 'use strict';
 
-const KEY_MAP = { // PC keyboard → semitone offset from C4
+const KEY_MAP = { // PC keyboard → semitone offset from startOctave (C3)
   'a': 0, 'w': 1, 's': 2, 'e': 3, 'd': 4, 'f': 5, 't': 6, 'g': 7, 'y': 8, 'h': 9, 'u': 10, 'j': 11,
-  'k': 12, 'o': 13, 'l': 14, 'p': 15, ';': 16, "'": 17
+  'k': 12, 'o': 13, 'l': 14, 'p': 15, ';': 16, "'": 17, '[': 18, ']': 19
 };
-const WHITE_OFFSETS = [0, 2, 4, 5, 7, 9, 11];
-const BLACK_AFTER = { 0: 1, 2: 3, 5: 6, 7: 8, 9: 10 };
+const BLACK_MAP = { 0: 'C#', 1: 'D#', 3: 'F#', 4: 'G#', 5: 'A#' };
+
+// Quick reverse lookup for UI hint
+const NOTE_TO_KEY = {};
+const SEMI_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+for (const [k, off] of Object.entries(KEY_MAP)) {
+  const oct = 3 + Math.floor(off / 12);
+  const n = SEMI_NAMES[off % 12] + oct;
+  if (!NOTE_TO_KEY[n]) NOTE_TO_KEY[n] = k.toUpperCase();
+}
 
 class PianoUI {
   constructor(container, opts = {}) {
@@ -28,24 +36,30 @@ class PianoUI {
       for (let w = 0; w < 7; w++) {
         const oct = this.startOctave + o;
         const note = ['C','D','E','F','G','A','B'][w] + oct;
-        whites.push({ note, idx: o * 7 + w });
+        whites.push({ note, idx: o * 7 + w, oct, w });
       }
     }
-    whites.forEach(({ note, idx }) => {
+    const totalWhites = whites.length;
+
+    whites.forEach(({ note, idx, oct, w }) => {
       const k = document.createElement('div');
       k.className = 'key white';
       k.dataset.note = note;
-      k.innerHTML = `<span class="key-label">${note}</span>`;
+      const keyHint = NOTE_TO_KEY[note] ? `<small class="pc-hint">${NOTE_TO_KEY[note]}</small>` : '';
+      k.innerHTML = `<span class="key-label">${note}${keyHint}</span>`;
       this.container.appendChild(k);
       this.keys[note] = k;
-      // black key after this white (if pattern says so and not last overall)
-      const w = idx % 7;
-      if (BLACK_AFTER[w] !== undefined && (idx < whites.length - 1 || w < 5)) {
-        const bn = ['C#','D#','F#','G#','A#'][[0,2,5,7,9].indexOf(w)] + note.slice(-1);
+
+      // black key after this white (C#, D#, F#, G#, A#)
+      if (BLACK_MAP[w] !== undefined && idx < totalWhites - 1) {
+        const bn = BLACK_MAP[w] + oct;
         const bk = document.createElement('div');
         bk.className = 'key black';
         bk.dataset.note = bn;
-        bk.innerHTML = `<span class="key-label">${bn}</span>`;
+        const bHint = NOTE_TO_KEY[bn] ? `<small class="pc-hint">${NOTE_TO_KEY[bn]}</small>` : '';
+        bk.innerHTML = `<span class="key-label">${bn}${bHint}</span>`;
+        // Position at the boundary between this white key and the next
+        bk.style.left = `calc(6px + (100% - 12px) * ${(idx + 1) / totalWhites})`;
         this.container.appendChild(bk);
         this.keys[bn] = bk;
       }
