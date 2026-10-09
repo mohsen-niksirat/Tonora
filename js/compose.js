@@ -20,6 +20,7 @@ const ComposeMode = {
         <button class="btn" id="cmp-stop">■</button>
         <label>${t('tempo')}: <input type="number" id="cmp-bpm" min="40" max="240" value="${this.bpm}" style="width:5em"></label>
         <label>${t('velocity')}: <input type="range" id="cmp-vel" min="0.4" max="1" step="0.05" value="${this.velocity}" style="width:7em"></label>
+        <span class="cmp-dur" id="cmp-dur" title="${t('duration')}"></span>
         <button class="btn" id="cmp-save">${t('save')}</button>
         <button class="btn" id="cmp-export">${t('export')}</button>
         <button class="btn" id="cmp-wav">${t('exportWav')}</button>
@@ -30,14 +31,29 @@ const ComposeMode = {
     `;
     root.querySelector('#cmp-play').onclick = () => this.togglePlay();
     root.querySelector('#cmp-stop').onclick = () => this.stop();
-    root.querySelector('#cmp-bpm').onchange = e => { this.bpm = +e.target.value || 120; };
+    root.querySelector('#cmp-bpm').onchange = e => {
+      this.bpm = Math.max(40, Math.min(240, +e.target.value || 120));
+      e.target.value = this.bpm;
+      this.updateDuration();
+    };
     root.querySelector('#cmp-vel').oninput = e => { this.velocity = +e.target.value; this.tracks.velocity = this.velocity; };
     root.querySelector('#cmp-save').onclick = () => this.save();
     root.querySelector('#cmp-export').onclick = () => this.exportSong();
     root.querySelector('#cmp-wav').onclick = () => this.exportWav();
     root.querySelector('#cmp-import').onchange = e => this.importSong(e.target.files[0]);
-    root.querySelector('#cmp-clear').onclick = () => { this.tracks = { melody: new Array(this.steps).fill(null), drums: new Array(this.steps).fill(false), bass: new Array(this.steps).fill(null), velocity: this.velocity }; this.buildRoll(); };
+    root.querySelector('#cmp-clear').onclick = () => {
+      if (confirm(t('confirmClear'))) {
+        this.tracks = { melody: new Array(this.steps).fill(null), drums: new Array(this.steps).fill(false), bass: new Array(this.steps).fill(null), velocity: this.velocity };
+        this.buildRoll();
+      }
+    };
     this.buildRoll();
+    this.updateDuration();
+  },
+
+  updateDuration() {
+    const el = document.getElementById('cmp-dur');
+    if (el) el.textContent = `⏱ ${(this.steps * this.stepDur()).toFixed(1)}s`;
   },
 
   loadSaved() {
@@ -226,6 +242,7 @@ const ComposeMode = {
           this.bpm = d.bpm || 120;
           document.getElementById('cmp-bpm').value = this.bpm;
           this.buildRoll();
+          this.updateDuration();
         }
       } catch (e) { alert('Invalid file'); }
     };

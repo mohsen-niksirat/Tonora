@@ -23,7 +23,9 @@ const I18N = {
     ach_composer: 'Composer', ach_composer_d: 'Save your first composition',
     ach_exporter: 'Exporter', ach_exporter_d: 'Export your first WAV',
     ach_midi: 'MIDI Master', ach_midi_d: 'Play a note via MIDI',
-    ach_streak3: '3-Day Streak', ach_streak3_d: 'Play 3 days in a row'
+    ach_streak3: '3-Day Streak', ach_streak3_d: 'Play 3 days in a row',
+    confirmClear: 'Clear all notes?', duration: 'Duration',
+    playAgain: 'Play Again', nextSong: 'Next Song', octave: 'Octave'
   },
   fa: {
     play: 'اجرا', learn: 'آموزش', compose: 'آهنگسازی',
@@ -46,7 +48,9 @@ const I18N = {
     ach_composer: 'آهنگساز', ach_composer_d: 'اولین آهنگت را ذخیره کن',
     ach_exporter: 'خروجی‌گیر', ach_exporter_d: 'اولین WAV را خروجی بگیر',
     ach_midi: 'استاد میدی', ach_midi_d: 'یک نت با میدی بزن',
-    ach_streak3: '۳ روز پیاپی', ach_streak3_d: '۳ روز پشت هم اجرا کن'
+    ach_streak3: '۳ روز پیاپی', ach_streak3_d: '۳ روز پشت هم اجرا کن',
+    confirmClear: 'همه نت‌ها پاک شوند؟', duration: 'مدت',
+    playAgain: 'تکرار درس', nextSong: 'آهنگ بعدی', octave: 'اکتاو'
   }
 };
 

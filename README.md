@@ -22,6 +22,16 @@ Tonora is a client-side music studio: play virtual instruments, learn famous son
 
 ## Changelog
 
+### v2.2 — piano keyboard overhaul, octave shifter, practice & sequencer enhancements
+- 🎹 **Complete 24-key chromatic piano** — all 10 black keys (C#, D#, F#, G#, A# across both octaves) correctly generated and aligned pixel-perfect at white key boundaries.
+- 🎛️ **Live Octave Shifter** — easily switch between octaves (C2–B3, C3–B4, C4–B5) with the new header controls in Play mode.
+- ⌨️ **PC Keyboard Hints** — piano keys display computer keyboard shortcuts with 2 full octaves of comfortable mapping.
+- 🎓 **Fixed Learn Mode Listen Audio** — notes are now scheduled precisely on beat using `scheduleNote`, with instant voice cancellation on exit.
+- 🏆 **High Score Tracking** — tracks and displays your best scores per song with badges directly on lesson cards.
+- 🎼 **Step Sequencer Enhancements** — clear 4-beat visual separators, live duration badge (`⏱ 4.0s`), playhead pause state, and safe clear confirmation.
+- 🔊 **Lush Acoustic Reverb** — high-frequency noise absorption filter in procedural impulse response for natural hall acoustics.
+- 🎛️ **MIDI Crash Fix** — resolved instrument lookup bug when triggering notes via external MIDI keyboards.
+
 ### v2.1 — audio stability & performance
 - 🔧 **Fixed the Guitar voice** — the old Karplus–Strong loop could self-oscillate (harsh metallic ring) and take down all app audio. Now a proper plucked string: lowpass-filtered noise seed, Q = 0.5 damping filter, 0.992 feedback → warm pluck that decays in ~2–4 s.
 - 🔊 **Audio auto-revival** — Chrome can suspend the AudioContext mid-session (autoplay policy). A document-level gesture listener (re-armed on every mode switch) resumes it on the next click/keypress; if audio is requested while suspended, a toast appears ("click anywhere to start audio") instead of silent death. Context state changes log to `console.debug`.

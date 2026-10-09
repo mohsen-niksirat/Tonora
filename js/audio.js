@@ -14,7 +14,12 @@ function makeReverbBuffer(ctx) {
   const buf = ctx.createBuffer(2, len, ctx.sampleRate);
   for (let ch = 0; ch < 2; ch++) {
     const d = buf.getChannelData(ch);
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+    let lp = 0;
+    for (let i = 0; i < len; i++) {
+      const w = Math.random() * 2 - 1;
+      lp += 0.35 * (w - lp); // natural acoustic high-frequency absorption
+      d[i] = lp * Math.pow(1 - i / len, 2.8);
+    }
   }
   return buf;
 }

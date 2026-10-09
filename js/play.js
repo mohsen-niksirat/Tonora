@@ -5,6 +5,7 @@
 const PlayMode = {
   piano: null,
   current: 'piano',
+  octave: 3,
   midi: null,        // {access, input}
 
   inst(id) {
@@ -21,6 +22,11 @@ const PlayMode = {
     root.innerHTML = `
       <div class="mode-head">
         <div class="inst-tabs" id="inst-tabs"></div>
+        <div class="octave-box" id="octave-box">
+          <button class="btn oct-btn" id="oct-down" title="${t('octave')} -">◀</button>
+          <span class="oct-lbl" id="oct-lbl">C${this.octave}–B${this.octave + 1}</span>
+          <button class="btn oct-btn" id="oct-up" title="${t('octave')} +">▶</button>
+        </div>
         <div class="midi-box hidden" id="midi-box"></div>
       </div>
       <div id="play-surface" class="play-surface"></div>
@@ -34,8 +40,20 @@ const PlayMode = {
       b.onclick = () => this.select(inst.id);
       tabs.appendChild(b);
     });
+    root.querySelector('#oct-down').onclick = () => {
+      if (this.octave > 2) { this.octave--; this.updateOctave(); }
+    };
+    root.querySelector('#oct-up').onclick = () => {
+      if (this.octave < 4) { this.octave++; this.updateOctave(); }
+    };
     this.select('piano');
     this.initMIDI();
+  },
+
+  updateOctave() {
+    const lbl = document.getElementById('oct-lbl');
+    if (lbl) lbl.textContent = `C${this.octave}–B${this.octave + 1}`;
+    if (this.piano) this.piano.setStartOctave(this.octave);
   },
 
   select(id) {
@@ -43,6 +61,8 @@ const PlayMode = {
     this.current = id;
     document.querySelectorAll('.inst-tab').forEach(b => b.classList.toggle('active', b.dataset.id === id));
     const surf = document.getElementById('play-surface');
+    const octBox = document.getElementById('octave-box');
+    if (octBox) octBox.classList.toggle('hidden', inst.type === 'drumkit');
     if (this.piano) { this.piano.destroy(); this.piano = null; }
     if (inst.type === 'drumkit') {
       surf.innerHTML = '<div class="drum-grid" id="drum-grid"></div>';
@@ -70,6 +90,7 @@ const PlayMode = {
       surf.innerHTML = '<div id="piano-keys"></div>';
       this.piano = new PianoUI(document.getElementById('piano-keys'), {
         octaves: 2,
+        startOctave: this.octave,
         onNote: (note) => { window.TonoraAudio.playNote(inst, note); }
       });
       // resume audio context on first interaction (autoplay policy)

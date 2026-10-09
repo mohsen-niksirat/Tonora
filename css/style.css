@@ -106,6 +106,7 @@ main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width
 .compose-hud { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; padding-bottom: .5rem; }
 .compose-hud label { color: var(--muted); font-size: .85rem; display: flex; gap: .3rem; align-items: center; }
 .compose-hud input[type=number] { background: var(--card); border: 1px solid rgba(255,255,255,.1); color: var(--text); border-radius: .4rem; padding: .3rem; font: inherit; }
+.cmp-dur { font-size: .8rem; color: var(--accent); background: var(--bg2); padding: .35rem .6rem; border-radius: .4rem; font-variant-numeric: tabular-nums; border: 1px solid rgba(255,255,255,.08); }
 .file-btn { position: relative; overflow: hidden; }
 .roll-wrap { overflow-x: auto; padding-bottom: 1rem; }
 .roll-row { display: flex; gap: 2px; margin-bottom: 2px; }
@@ -144,6 +145,10 @@ dialog select { font: inherit; padding: .3rem; border-radius: .4rem; background:
 /* v2: MIDI box, achievements, toasts, velocity slider */
 .mode-head { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
 .mode-head .inst-tabs { flex: 1; min-width: 0; }
+.octave-box { display: flex; align-items: center; gap: .3rem; background: var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 999px; padding: 2px 6px; }
+.oct-btn { background: none; border: none; color: var(--muted); padding: .2rem .4rem; cursor: pointer; font-size: .75rem; border-radius: 999px; }
+.oct-btn:hover { color: var(--text); background: var(--bg2); }
+.oct-lbl { font-size: .75rem; font-weight: 600; color: var(--accent); min-width: 4.5em; text-align: center; }
 .midi-box { flex-shrink: 0; }
 .midi-box select {
   font: inherit; font-size: .8rem; padding: .3rem .5rem; border-radius: .5rem;

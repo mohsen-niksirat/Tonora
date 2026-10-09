@@ -142,6 +142,11 @@ class PianoUI {
     setTimeout(() => el.classList.remove('pressed'), 150);
   }
 
+  setStartOctave(oct) {
+    this.startOctave = Math.max(1, Math.min(5, oct));
+    this.build();
+  }
+
   destroy() {
     window.removeEventListener('keydown', this._pcDown);
     window.removeEventListener('keyup', this._pcUp);
