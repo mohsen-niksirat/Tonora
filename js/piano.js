@@ -22,8 +22,11 @@ class PianoUI {
     this.octaves = opts.octaves || 2;
     this.startOctave = opts.startOctave !== undefined ? opts.startOctave : 3;
     this.onNote = opts.onNote || (() => {});
+    this.onSustainChange = opts.onSustainChange || (() => {});
     this.keys = {};       // note name -> element
     this.active = new Set();
+    this.sustain = false;
+    this.sustainedKeys = new Set();
     this.build();
     this._bindPC();
   }
@@ -96,7 +99,13 @@ class PianoUI {
 
   _bindPC() {
     this._pcDown = (e) => {
-      if (e.repeat || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        this.setSustain(true);
+        return;
+      }
+      if (e.repeat) return;
       const off = KEY_MAP[e.key.toLowerCase()];
       if (off === undefined) return;
       const oct = this.startOctave + Math.floor(off / 12);
@@ -105,6 +114,11 @@ class PianoUI {
       this.press(note);
     };
     this._pcUp = (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        this.setSustain(false);
+        return;
+      }
       const off = KEY_MAP[e.key.toLowerCase()];
       if (off === undefined) return;
       const oct = this.startOctave + Math.floor(off / 12);
@@ -115,10 +129,25 @@ class PianoUI {
     window.addEventListener('keyup', this._pcUp);
   }
 
+  setSustain(val) {
+    this.sustain = !!val;
+    if (!this.sustain) {
+      this.sustainedKeys.forEach(n => {
+        if (!this.active.has(n)) {
+          const el = this.keys[n];
+          if (el) el.classList.remove('pressed');
+        }
+      });
+      this.sustainedKeys.clear();
+    }
+    this.onSustainChange(this.sustain);
+  }
+
   press(note, el) {
     el = el || this.keys[note];
     if (!el || this.active.has(note)) return;
     this.active.add(note);
+    this.sustainedKeys.delete(note);
     el.classList.add('pressed');
     this.onNote(note);
   }
@@ -127,6 +156,10 @@ class PianoUI {
     el = el || this.keys[note];
     if (!el) return;
     this.active.delete(note);
+    if (this.sustain) {
+      this.sustainedKeys.add(note);
+      return;
+    }
     el.classList.remove('pressed');
   }
 

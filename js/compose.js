@@ -13,6 +13,7 @@ const ComposeMode = {
 
   enter(root) {
     this.tracks = { melody: new Array(this.steps).fill(null), drums: new Array(this.steps).fill(false), bass: new Array(this.steps).fill(null) };
+    this.muted = { melody: false, drums: false, bass: false };
     this.loadSaved();
     root.innerHTML = `
       <div class="compose-hud">
@@ -21,6 +22,15 @@ const ComposeMode = {
         <label>${t('tempo')}: <input type="number" id="cmp-bpm" min="40" max="240" value="${this.bpm}" style="width:5em"></label>
         <label>${t('velocity')}: <input type="range" id="cmp-vel" min="0.4" max="1" step="0.05" value="${this.velocity}" style="width:7em"></label>
         <span class="cmp-dur" id="cmp-dur" title="${t('duration')}"></span>
+        <select class="btn" id="cmp-presets" style="font-size:0.8rem; padding:0.35rem 0.5rem">
+          <option value="">✨ ${t('presets')}</option>
+          <option value="pop">Pop Groove</option>
+          <option value="synthwave">Synthwave</option>
+          <option value="lofi">Lofi Chill</option>
+        </select>
+        <button class="btn toggle" id="mute-mel" title="Mute melody">🎹 ${t('melody')}</button>
+        <button class="btn toggle" id="mute-drm" title="Mute drums">🥁 ${t('drums')}</button>
+        <button class="btn toggle" id="mute-bass" title="Mute bass">🌈 ${t('bass')}</button>
         <button class="btn" id="cmp-save">${t('save')}</button>
         <button class="btn" id="cmp-export">${t('export')}</button>
         <button class="btn" id="cmp-wav">${t('exportWav')}</button>
@@ -37,6 +47,21 @@ const ComposeMode = {
       this.updateDuration();
     };
     root.querySelector('#cmp-vel').oninput = e => { this.velocity = +e.target.value; this.tracks.velocity = this.velocity; };
+    root.querySelector('#cmp-presets').onchange = e => {
+      if (e.target.value) { this.loadPreset(e.target.value); e.target.value = ''; }
+    };
+    const wireMute = (id, key) => {
+      const b = root.querySelector('#' + id);
+      b.onclick = () => {
+        this.muted[key] = !this.muted[key];
+        b.classList.toggle('active', !this.muted[key]);
+        b.style.opacity = this.muted[key] ? '0.45' : '1';
+      };
+      b.classList.add('active');
+    };
+    wireMute('mute-mel', 'melody');
+    wireMute('mute-drm', 'drums');
+    wireMute('mute-bass', 'bass');
     root.querySelector('#cmp-save').onclick = () => this.save();
     root.querySelector('#cmp-export').onclick = () => this.exportSong();
     root.querySelector('#cmp-wav').onclick = () => this.exportWav();
@@ -47,6 +72,91 @@ const ComposeMode = {
         this.buildRoll();
       }
     };
+    this.buildRoll();
+    this.updateDuration();
+  },
+
+  loadPreset(key) {
+    const PRESETS = {
+      pop: {
+        bpm: 120, velocity: 0.85,
+        tracks: {
+          melody: [
+            'C5', null, 'E4', null, 'G4', null, 'C5', null,
+            'D4', null, 'F4', null, 'A4', null, 'D4', null,
+            'E4', null, 'G4', null, 'C5', null, 'E4', null,
+            'G4', null, ['E4','C4'], null, 'G4', null, 'C5', null
+          ],
+          bass: [
+            'C3', null, 'C3', null, 'A2', null, 'A2', null,
+            'F2', null, 'F2', null, 'G2', null, 'G2', null,
+            'C3', null, 'C3', null, 'A2', null, 'A2', null,
+            'F2', null, 'F2', null, 'G2', null, 'G2', null
+          ],
+          drums: [
+            true, false, true, false, true, false, true, false,
+            true, false, true, false, true, false, true, false,
+            true, false, true, false, true, false, true, false,
+            true, false, true, false, true, false, true, true
+          ]
+        }
+      },
+      synthwave: {
+        bpm: 110, velocity: 0.8,
+        tracks: {
+          melody: [
+            ['C5','G4'], null, ['C5','G4'], null, ['D4','A4'], null, ['D4','A4'], null,
+            ['E4','B4'], null, ['E4','B4'], null, ['C5','G4'], null, ['D4','A4'], null,
+            ['C5','G4'], null, ['C5','G4'], null, ['D4','A4'], null, ['D4','A4'], null,
+            ['E4','B4'], null, ['G4','E4'], null, ['C5','E4'], null, ['C5','G4'], null
+          ],
+          bass: [
+            'A2', 'A2', 'A2', 'A2', 'F2', 'F2', 'F2', 'F2',
+            'G2', 'G2', 'G2', 'G2', 'C3', 'C3', 'C3', 'C3',
+            'A2', 'A2', 'A2', 'A2', 'F2', 'F2', 'F2', 'F2',
+            'G2', 'G2', 'G2', 'G2', 'C3', 'C3', 'C3', 'C3'
+          ],
+          drums: [
+            true, false, true, false, true, false, true, false,
+            true, false, true, false, true, false, true, false,
+            true, false, true, false, true, false, true, false,
+            true, false, true, false, true, false, true, false
+          ]
+        }
+      },
+      lofi: {
+        bpm: 85, velocity: 0.75,
+        tracks: {
+          melody: [
+            ['C5','E4','G4'], null, null, null, ['A4','C4','E4'], null, null, null,
+            ['F4','A4','C4'], null, null, null, ['G4','B4','D4'], null, null, null,
+            ['C5','E4','G4'], null, null, null, ['A4','C4','E4'], null, null, null,
+            ['F4','A4','C4'], null, null, null, ['G4','B4','D4'], null, null, null
+          ],
+          bass: [
+            'C3', null, null, null, 'A2', null, null, null,
+            'F2', null, null, null, 'G2', null, null, null,
+            'C3', null, null, null, 'A2', null, null, null,
+            'F2', null, null, null, 'G2', null, null, null
+          ],
+          drums: [
+            true, false, false, true, false, false, true, false,
+            false, true, false, false, true, false, false, true,
+            true, false, false, true, false, false, true, false,
+            false, true, false, false, true, false, true, false
+          ]
+        }
+      }
+    };
+    const p = PRESETS[key];
+    if (!p) return;
+    this.bpm = p.bpm;
+    this.velocity = p.velocity;
+    this.tracks = this.normalizeTracks(p.tracks);
+    const bIn = document.getElementById('cmp-bpm');
+    if (bIn) bIn.value = this.bpm;
+    const vIn = document.getElementById('cmp-vel');
+    if (vIn) vIn.value = this.velocity;
     this.buildRoll();
     this.updateDuration();
   },
@@ -173,13 +283,17 @@ const ComposeMode = {
 
   playStep(s) {
     const vel = this.velocity;
-    const m = this.tracks.melody[s];
-    if (m) (Array.isArray(m) ? m : [m]).forEach(n =>
-      window.TonoraAudio.playNote(this.inst('piano'), n, this.stepDur() * 2, vel));
-    const b = this.tracks.bass[s];
-    if (b) (Array.isArray(b) ? b : [b]).forEach(n =>
-      window.TonoraAudio.playNote(this.inst('synth'), n, this.stepDur() * 3, vel));
-    if (this.tracks.drums[s]) {
+    if (!this.muted || !this.muted.melody) {
+      const m = this.tracks.melody[s];
+      if (m) (Array.isArray(m) ? m : [m]).forEach(n =>
+        window.TonoraAudio.playNote(this.inst('piano'), n, this.stepDur() * 2, vel));
+    }
+    if (!this.muted || !this.muted.bass) {
+      const b = this.tracks.bass[s];
+      if (b) (Array.isArray(b) ? b : [b]).forEach(n =>
+        window.TonoraAudio.playNote(this.inst('synth'), n, this.stepDur() * 3, vel));
+    }
+    if ((!this.muted || !this.muted.drums) && this.tracks.drums[s]) {
       const d = this.inst('drums');
       window.TonoraAudio.playDrum(d, s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel);
     }

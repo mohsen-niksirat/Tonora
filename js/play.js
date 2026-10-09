@@ -27,6 +27,7 @@ const PlayMode = {
           <span class="oct-lbl" id="oct-lbl">C${this.octave}–B${this.octave + 1}</span>
           <button class="btn oct-btn" id="oct-up" title="${t('octave')} +">▶</button>
         </div>
+        <button class="btn toggle-btn" id="sustain-btn" title="Space">🦶 ${t('sustain')}</button>
         <div class="midi-box hidden" id="midi-box"></div>
       </div>
       <div id="play-surface" class="play-surface"></div>
@@ -46,6 +47,12 @@ const PlayMode = {
     root.querySelector('#oct-up').onclick = () => {
       if (this.octave < 4) { this.octave++; this.updateOctave(); }
     };
+    const susBtn = root.querySelector('#sustain-btn');
+    if (susBtn) {
+      susBtn.onclick = () => {
+        if (this.piano) this.piano.setSustain(!this.piano.sustain);
+      };
+    }
     this.select('piano');
     this.initMIDI();
   },
@@ -63,6 +70,8 @@ const PlayMode = {
     const surf = document.getElementById('play-surface');
     const octBox = document.getElementById('octave-box');
     if (octBox) octBox.classList.toggle('hidden', inst.type === 'drumkit');
+    const susBtn = document.getElementById('sustain-btn');
+    if (susBtn) susBtn.classList.toggle('hidden', inst.type === 'drumkit');
     if (this.piano) { this.piano.destroy(); this.piano = null; }
     if (inst.type === 'drumkit') {
       surf.innerHTML = '<div class="drum-grid" id="drum-grid"></div>';
@@ -91,7 +100,14 @@ const PlayMode = {
       this.piano = new PianoUI(document.getElementById('piano-keys'), {
         octaves: 2,
         startOctave: this.octave,
-        onNote: (note) => { window.TonoraAudio.playNote(inst, note); }
+        onNote: (note) => {
+          const dur = (this.piano && this.piano.sustain) ? 3.0 : 0;
+          window.TonoraAudio.playNote(inst, note, dur);
+        },
+        onSustainChange: (active) => {
+          const b = document.getElementById('sustain-btn');
+          if (b) b.classList.toggle('active', active);
+        }
       });
       // resume audio context on first interaction (autoplay policy)
       document.body.addEventListener('pointerdown', () => window.TonoraAudio.ensure(), { once: true });

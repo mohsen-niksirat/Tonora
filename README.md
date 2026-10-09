@@ -22,6 +22,15 @@ Tonora is a client-side music studio: play virtual instruments, learn famous son
 
 ## Changelog
 
+### v3.0 — studio master limiter, sustain pedal, presets & lesson summary
+- 🛡️ **Broadcast Master Limiter** — integrated studio-grade DynamicsCompressorNode across live output and offline WAV rendering to prevent digital clipping under dense polyphony.
+- 🔊 **Master Volume Control** — global volume slider in header with localStorage persistence.
+- 🎻 **New Instruments** — added lush Strings (sawtooth ensemble) and Church Organ with classical harmonic drawbars.
+- 🦶 **Sustain Pedal** — full sustain pedal support in Play mode via UI toggle and PC Spacebar hold.
+- ⚡ **Skip to Play** — Learn mode listen phase now includes a "Skip to Play" button to jump straight into practice.
+- 📊 **Lesson Summary Modal** — interactive completion card displaying Stars, Final Score, Accuracy %, Max Combo, with one-click "Play Again" and "Next Song".
+- ✨ **Sequencer Presets & Mute** — Pop Groove, Synthwave, and Lofi Chill built-in templates with individual track mute toggles (Melody, Drums, Bass).
+
 ### v2.2 — piano keyboard overhaul, octave shifter, practice & sequencer enhancements
 - 🎹 **Complete 24-key chromatic piano** — all 10 black keys (C#, D#, F#, G#, A# across both octaves) correctly generated and aligned pixel-perfect at white key boundaries.
 - 🎛️ **Live Octave Shifter** — easily switch between octaves (C2–B3, C3–B4, C4–B5) with the new header controls in Play mode.

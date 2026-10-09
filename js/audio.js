@@ -37,7 +37,15 @@ class AudioEngine {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
       this.master = this.ctx.createGain();
       this.master.gain.value = 0.7;
-      this.master.connect(this.ctx.destination);
+      // Studio brickwall limiter compressor to prevent digital clipping
+      this.limiter = this.ctx.createDynamicsCompressor();
+      this.limiter.threshold.value = -3;
+      this.limiter.knee.value = 6;
+      this.limiter.ratio.value = 12;
+      this.limiter.attack.value = 0.003;
+      this.limiter.release.value = 0.15;
+      this.master.connect(this.limiter);
+      this.limiter.connect(this.ctx.destination);
       // simple algorithmic reverb (noise impulse)
       this.reverb = this.ctx.createConvolver();
       this.reverb.buffer = makeReverbBuffer(this.ctx);
@@ -66,6 +74,13 @@ class AudioEngine {
       console.debug('[Tonora] revive() rejected:', e && e.message);
     }
     return this.ctx.state === 'running';
+  }
+
+  setMasterGain(val) {
+    if (this.master && this.ctx) {
+      const v = Math.max(0, Math.min(1.2, val));
+      this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.03);
+    }
   }
 
   showPausedToast() {
@@ -390,7 +405,14 @@ async function renderCompositionToWav(tracks, bpm, steps) {
   const off = new OfflineAudioContext(2, Math.ceil(totalDur * sr), sr);
   const master = off.createGain();
   master.gain.value = 0.7;
-  master.connect(off.destination);
+  const limiter = off.createDynamicsCompressor();
+  limiter.threshold.value = -3;
+  limiter.knee.value = 6;
+  limiter.ratio.value = 12;
+  limiter.attack.value = 0.003;
+  limiter.release.value = 0.15;
+  master.connect(limiter);
+  limiter.connect(off.destination);
   const reverb = off.createConvolver();
   reverb.buffer = makeReverbBuffer(off);
   const rg = off.createGain();

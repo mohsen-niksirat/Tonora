@@ -25,7 +25,10 @@ const I18N = {
     ach_midi: 'MIDI Master', ach_midi_d: 'Play a note via MIDI',
     ach_streak3: '3-Day Streak', ach_streak3_d: 'Play 3 days in a row',
     confirmClear: 'Clear all notes?', duration: 'Duration',
-    playAgain: 'Play Again', nextSong: 'Next Song', octave: 'Octave'
+    playAgain: 'Play Again', nextSong: 'Next Song', octave: 'Octave',
+    sustain: 'Sustain', skipListen: 'Skip to Play', accuracy: 'Accuracy',
+    maxCombo: 'Max Combo', songsList: 'Song List', presets: 'Presets',
+    mute: 'Mute', lessonComplete: 'Lesson Complete!'
   },
   fa: {
     play: 'اجرا', learn: 'آموزش', compose: 'آهنگسازی',
@@ -50,7 +53,10 @@ const I18N = {
     ach_midi: 'استاد میدی', ach_midi_d: 'یک نت با میدی بزن',
     ach_streak3: '۳ روز پیاپی', ach_streak3_d: '۳ روز پشت هم اجرا کن',
     confirmClear: 'همه نت‌ها پاک شوند؟', duration: 'مدت',
-    playAgain: 'تکرار درس', nextSong: 'آهنگ بعدی', octave: 'اکتاو'
+    playAgain: 'تکرار درس', nextSong: 'آهنگ بعدی', octave: 'اکتاو',
+    sustain: 'ساستین', skipListen: 'پرش به نواختن', accuracy: 'دقت',
+    maxCombo: 'بیشترین کمبو', songsList: 'لیست آهنگ‌ها', presets: 'الگوها',
+    mute: 'بی‌صدا', lessonComplete: 'درس به پایان رسید!'
   }
 };
 

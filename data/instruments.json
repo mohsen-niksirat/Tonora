@@ -57,6 +57,24 @@
       "adsr": {"a": 0.002, "d": 1.2, "s": 0.0, "r": 0.4}
     },
     {
+      "id": "strings",
+      "name": {"en": "Strings", "fa": "سازهای زهی"},
+      "icon": "🎻",
+      "type": "additive",
+      "partials": [1, 0.65, 0.4, 0.25, 0.15, 0.08],
+      "wave": "sawtooth",
+      "adsr": {"a": 0.08, "d": 0.4, "s": 0.7, "r": 0.6}
+    },
+    {
+      "id": "organ",
+      "name": {"en": "Organ", "fa": "ارگ"},
+      "icon": "⛪",
+      "type": "additive",
+      "partials": [1, 0.75, 0.5, 0.35, 0.2, 0.1],
+      "wave": "sine",
+      "adsr": {"a": 0.01, "d": 0.2, "s": 0.85, "r": 0.2}
+    },
+    {
       "id": "drums",
       "name": {"en": "Drums", "fa": "درام"},
       "icon": "🥁",

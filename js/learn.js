@@ -23,11 +23,13 @@ const LearnMode = {
           <button class="btn toggle" id="learn-metro">🥁 ${t('metronome')}</button>
           <button class="btn toggle" id="learn-speed">1×</button>
           <button class="btn toggle" id="learn-ab">🔁 ${t('next8')}</button>
+          <button class="btn primary" id="learn-skip">⚡ ${t('skipListen')}</button>
           <div class="learn-status" id="learn-status"></div>
           <div class="learn-score" id="learn-score"></div>
         </div>
         <div class="learn-canvas-holder" id="learn-canvas-holder"><canvas id="fall-canvas"></canvas></div>
         <div id="learn-piano"></div>
+        <div class="learn-modal hidden" id="learn-modal"></div>
       </div>
     `;
     const list = root.querySelector('#songs');
@@ -107,6 +109,22 @@ const LearnMode = {
     const ctx = window.TonoraAudio.ensure();
     const t0 = ctx.currentTime + 0.5;
 
+    this.maxCombo = 0;
+    this.totalHits = 0;
+    const skipBtn = document.getElementById('learn-skip');
+    if (skipBtn) {
+      skipBtn.classList.remove('hidden');
+      skipBtn.onclick = () => {
+        if (this.phase === 'listen') {
+          if (this._listenTimers) this._listenTimers.forEach(t => clearTimeout(t));
+          if (this._scheduledVoices) this._scheduledVoices.forEach(v => { try { if (v && v.stop) v.stop(); } catch (e) {} });
+          clearTimeout(this._listenTimer);
+          skipBtn.classList.add('hidden');
+          this.beginPlay(spb);
+        }
+      };
+    }
+
     // Schedule each note to play at its correct future timestamp
     song.notes.forEach(n => {
       const voice = window.TonoraAudio.scheduleNote(
@@ -154,6 +172,8 @@ const LearnMode = {
   },
 
   beginPlay(spb) {
+    const skipBtn = document.getElementById('learn-skip');
+    if (skipBtn) skipBtn.classList.add('hidden');
     this.spb = spb;
     this._prevSpeed = this.speed;
     this.phase = 'wait';
@@ -223,7 +243,9 @@ const LearnMode = {
     const win = 350 / this.speed;
     if (best && bestD < win && (best.n.n === note)) {
       this.hitIdx.add(best.i);
+      this.totalHits = (this.totalHits || 0) + 1;
       this.combo++;
+      if (this.combo > (this.maxCombo || 0)) this.maxCombo = this.combo;
       const pts = bestD < 120 / this.speed ? 100 : 50;
       this.score += pts + this.combo * 5;
       this.setStatus(bestD < 120 / this.speed ? t('perfect') : t('good'));
@@ -251,6 +273,7 @@ const LearnMode = {
         this.setStatus(`🎉 ${t('score')}: ${this.score}`);
         this.phase = 'done';
         TonoraAchievements.unlock('first_song');
+        this.showSummaryModal();
       }
     }
   },
@@ -323,7 +346,46 @@ const LearnMode = {
     if (this.piano) { this.piano.destroy(); this.piano = null; }
     const btn = document.getElementById('learn-ab');
     if (btn) { btn.classList.remove('active'); btn.textContent = `🔁 ${t('next8')}`; }
+    const skipBtn = document.getElementById('learn-skip');
+    if (skipBtn) skipBtn.classList.add('hidden');
+    const modal = document.getElementById('learn-modal');
+    if (modal) { modal.classList.add('hidden'); modal.innerHTML = ''; }
     this.repeat = null;
+  },
+
+  showSummaryModal() {
+    const modal = document.getElementById('learn-modal');
+    if (!modal || !this.song) return;
+    const totalNotes = this.song.notes.length;
+    const accuracy = Math.min(100, Math.round(((this.totalHits || 0) / totalNotes) * 100));
+    const starsCount = accuracy >= 85 ? 3 : (accuracy >= 60 ? 2 : 1);
+    const stars = '★'.repeat(starsCount) + '☆'.repeat(3 - starsCount);
+    const best = localStorage.getItem('tonora-score-' + this.song.id) || this.score;
+
+    const currentIdx = window.TONORA_SONGS.findIndex(s => s.id === this.song.id);
+    const nextSong = window.TONORA_SONGS[(currentIdx + 1) % window.TONORA_SONGS.length];
+
+    modal.classList.remove('hidden');
+    modal.innerHTML = `
+      <div class="summary-card">
+        <h3>🎉 ${t('lessonComplete')}</h3>
+        <div class="summary-stars">${stars}</div>
+        <div class="summary-grid">
+          <div class="sum-item"><small>${t('score')}</small><strong>${this.score}</strong></div>
+          <div class="sum-item"><small>${t('accuracy')}</small><strong>${accuracy}%</strong></div>
+          <div class="sum-item"><small>${t('maxCombo')}</small><strong>🔥 ${this.maxCombo || 0}</strong></div>
+          <div class="sum-item"><small>🏆 Best</small><strong>${best}</strong></div>
+        </div>
+        <div class="summary-actions">
+          <button class="btn primary" id="sum-replay">🔄 ${t('playAgain')}</button>
+          <button class="btn" id="sum-next">⏭️ ${t('nextSong')}</button>
+          <button class="btn" id="sum-list">📋 ${t('songsList')}</button>
+        </div>
+      </div>
+    `;
+    modal.querySelector('#sum-replay').onclick = () => { modal.classList.add('hidden'); this.start(this.song); };
+    modal.querySelector('#sum-next').onclick = () => { modal.classList.add('hidden'); this.start(nextSong); };
+    modal.querySelector('#sum-list').onclick = () => { modal.classList.add('hidden'); this.stop(); this.enter(document.getElementById('app')); };
   },
 
   leave() { this.stop(); }

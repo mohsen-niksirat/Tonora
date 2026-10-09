@@ -27,6 +27,9 @@ header {
   border-radius: 999px; cursor: pointer; font: inherit; white-space: nowrap;
 }
 .mode-tab.active { background: var(--card); color: var(--text); font-weight: 700; }
+.vol-wrap { display: flex; align-items: center; gap: .3rem; font-size: .85rem; color: var(--muted); }
+.vol-wrap input[type=range] { width: 4.8em; height: 4px; accent-color: var(--accent); cursor: pointer; }
+@media (max-width: 500px) { .vol-wrap input[type=range] { width: 3em; } }
 .icon-btn { background: none; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; padding: .3rem; }
 main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width: 1000px; width: 100%; margin: 0 auto; }
 .btn {
@@ -35,6 +38,8 @@ main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width
 }
 .btn.danger { color: var(--danger); }
 .btn.primary { background: linear-gradient(90deg, var(--accent), var(--accent2)); border: none; color: #fff; font-weight: 700; }
+.btn.toggle-btn { opacity: .65; }
+.btn.toggle-btn.active { opacity: 1; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); color: var(--text); }
 .hidden { display: none !important; }
 
 /* Play mode */
@@ -99,6 +104,27 @@ main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width
 /* canvas sits directly on top of the piano block — same width, zero gap */
 .learn-canvas-holder { position: relative; flex: 1; min-height: 28dvh; }
 .learn-canvas-holder canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+.learn-stage { position: relative; display: flex; flex-direction: column; flex: 1; }
+.learn-modal {
+  position: absolute; inset: 0; background: rgba(15, 18, 32, 0.88); backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center; z-index: 50; padding: 1rem; border-radius: 1rem;
+}
+.summary-card {
+  background: var(--card); border: 1px solid rgba(255,255,255,0.15); border-radius: 1.2rem;
+  padding: 1.5rem 1.8rem; max-width: 380px; width: 100%; text-align: center;
+  box-shadow: 0 16px 36px rgba(0,0,0,0.5);
+  display: flex; flex-direction: column; gap: .9rem;
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.summary-card h3 { margin: 0; font-size: 1.35rem; color: var(--text); }
+.summary-stars { font-size: 1.8rem; color: #f1c40f; letter-spacing: .25rem; }
+.summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; background: var(--bg2); padding: .8rem; border-radius: .8rem; }
+.sum-item { display: flex; flex-direction: column; gap: .2rem; }
+.sum-item small { color: var(--muted); font-size: .75rem; }
+.sum-item strong { font-size: 1.15rem; color: var(--accent); }
+.summary-actions { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: center; }
+
 #learn-piano { margin-top: 0; }
 #learn-piano .piano { margin-top: 0; border-radius: 0 0 .8rem .8rem; }
 
