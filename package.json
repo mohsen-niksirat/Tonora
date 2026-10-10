@@ -1,0 +1,9 @@
+{
+  "name": "tonora",
+  "version": "6.0.0",
+  "description": "Play, Learn, Compose music in browser.",
+  "private": true,
+  "scripts": {
+    "test": "node tests/basic.test.js"
+  }
+}
