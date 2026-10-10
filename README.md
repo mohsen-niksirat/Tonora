@@ -22,6 +22,12 @@ Tonora is a client-side music studio: play virtual instruments, learn famous son
 
 ## Changelog
 
+### v6.0 (The Masterpiece Update) — Arpeggiator, Neon Glow & Delay FX
+- 🎶 **Arpeggiator** — added an Arp button in Play mode. Hold down a chord and watch the arpeggiator cycle through the notes automatically (perfect for synthwave).
+- 🔁 **Global Delay FX** — introduced a ping-pong Delay slider to the master effects rack (works in both live play and WAV export).
+- 📏 **Dynamic Pattern Length** — the Compose mode sequencer is no longer locked to 32 steps! You can now choose between 16, 32, and 64 steps for longer or shorter phrases.
+- ✨ **Neon Glow & Mesh Graphics** — hitting piano keys now triggers a gorgeous neon box-shadow glow. The home screen features a premium, animated mesh gradient background.
+
 ### v5.0 (DAW Edition) — Channel Rack, Mixer Console, Stereo Panning
 - 🎚️ **Mixer Console** — added a real-time track mixer to Compose mode with independent Volume and Stereo Panning (Left/Right) sliders for Melody, Bass, and Drums (works in both live playback and offline WAV export).
 - 🥁 **Multi-Track Drum Rack** — the single drum line in Compose mode has been exploded into a true Channel Rack (Kick, Snare, Hi-hat), allowing for complex beat programming like FL Studio.

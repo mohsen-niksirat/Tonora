@@ -57,6 +57,18 @@ class AudioEngine {
       this.reverbGain.gain.value = 0.18;
       this.reverb.connect(this.reverbGain);
       this.reverbGain.connect(this.master);
+      // ping-pong delay
+      this.delay = this.ctx.createDelay(2.0);
+      this.delay.delayTime.value = 0.33; // 330ms default
+      this.delayFb = this.ctx.createGain();
+      this.delayFb.gain.value = 0.4;
+      this.delayOut = this.ctx.createGain();
+      this.delayOut.gain.value = 0.0; // OFF by default
+      this.delay.connect(this.delayFb);
+      this.delayFb.connect(this.delay);
+      this.delay.connect(this.delayOut);
+      this.delayOut.connect(this.master);
+      this.delayOut.connect(this.reverb); // send delay tail to reverb
       // track context state for debugging + revival UX
       this.ctx.onstatechange = () => {
         console.debug('[Tonora] AudioContext state →', this.ctx.state);
@@ -91,6 +103,13 @@ class AudioEngine {
     if (this.reverbGain && this.ctx) {
       const v = Math.max(0, Math.min(1.5, val));
       this.reverbGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.03);
+    }
+  }
+
+  setDelayGain(val) {
+    if (this.delayOut && this.ctx) {
+      const v = Math.max(0, Math.min(1.0, val));
+      this.delayOut.gain.setTargetAtTime(v, this.ctx.currentTime, 0.03);
     }
   }
 
@@ -161,11 +180,11 @@ class AudioEngine {
     const ctx = this.ensure();
     this.guard();
     const t = when > 0 ? when : ctx.currentTime;
-    return this.scheduleNote(ctx, this.master, this.reverb, instDef, note, dur, vel, t, opts);
+    return this.scheduleNote(ctx, this.master, this.reverb, instDef, note, dur, vel, t, opts, this.delay);
   }
 
   /* Core synthesis — works on any BaseAudioContext (live or offline) */
-  scheduleNote(ctx, master, reverb, instDef, note, dur = 0, vel = 0.8, when = 0, opts = {}) {
+  scheduleNote(ctx, master, reverb, instDef, note, dur = 0, vel = 0.8, when = 0, opts = {}, delayNode = null) {
     const t = when;
     const freq = typeof note === 'number' ? note : noteToFreq(note);
     const g = ctx.createGain();
@@ -180,6 +199,7 @@ class AudioEngine {
     
     outNode.connect(master);
     if (reverb) outNode.connect(reverb);
+    if (delayNode) outNode.connect(delayNode);
     
     const a = instDef.adsr || { a: 0.01, d: 0.3, s: 0.5, r: 0.2 };
     const peak = vel * 0.5 * (opts.vol ?? 1.0);
@@ -338,10 +358,10 @@ class AudioEngine {
     const ctx = this.ensure();
     this.guard();
     const t = when > 0 ? when : ctx.currentTime;
-    return this.scheduleDrum(ctx, this.master, this.reverb, instDef, padId, vel, t, opts);
+    return this.scheduleDrum(ctx, this.master, this.reverb, instDef, padId, vel, t, opts, this.delay);
   }
 
-  scheduleDrum(ctx, master, reverb, instDef, padId, vel, when, opts = {}) {
+  scheduleDrum(ctx, master, reverb, instDef, padId, vel, when, opts = {}, delayNode = null) {
     const t = when;
     const g = ctx.createGain();
     
@@ -355,6 +375,7 @@ class AudioEngine {
     
     outNode.connect(master);
     if (reverb) outNode.connect(reverb);
+    if (delayNode) outNode.connect(delayNode);
     
     vel = vel * (opts.vol ?? 1.0);
     
@@ -511,6 +532,16 @@ async function renderCompositionToWav(tracks, bpm, steps, swing) {
   const globalRev = localStorage.getItem('tonora-reverb');
   rg.gain.value = globalRev !== null ? +globalRev : 0.18;
   reverb.connect(rg); rg.connect(master);
+  
+  const delay = off.createDelay(2.0);
+  delay.delayTime.value = 0.33;
+  const delayFb = off.createGain();
+  delayFb.gain.value = 0.4;
+  const delayOut = off.createGain();
+  const globalDel = localStorage.getItem('tonora-delay');
+  delayOut.gain.value = globalDel !== null ? +globalDel : 0.0;
+  delay.connect(delayFb); delayFb.connect(delay);
+  delay.connect(delayOut); delayOut.connect(master); delayOut.connect(reverb);
   const eng = window.TonoraAudio;
   const inst = id => window.TONORA_INSTRUMENTS.find(i => i.id === id);
   const vel = (tracks.velocity !== undefined) ? tracks.velocity : 0.8;
@@ -529,21 +560,21 @@ async function renderCompositionToWav(tracks, bpm, steps, swing) {
     const mel = tracks.melody[s];
     if (mel) {
       const notesArr = Array.isArray(mel) ? mel : [mel];
-      notesArr.forEach(n => eng.scheduleNote(off, master, reverb, inst('piano'), n, dur * 2, vel, when, melOpts));
+      notesArr.forEach(n => eng.scheduleNote(off, master, reverb, inst('piano'), n, dur * 2, vel, when, melOpts, delay));
     }
     const bass = tracks.bass[s];
     if (bass) {
       const notesArr = Array.isArray(bass) ? bass : [bass];
-      notesArr.forEach(n => eng.scheduleNote(off, master, reverb, inst('synth'), n, dur * 3, vel, when, bassOpts));
+      notesArr.forEach(n => eng.scheduleNote(off, master, reverb, inst('synth'), n, dur * 3, vel, when, bassOpts, delay));
     }
     
     // Check old style single drum array, or new style dict
     if (tracks.drums[s] === true) {
-      eng.scheduleDrum(off, master, reverb, inst('drums'), s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel, when, drumOpts);
+      eng.scheduleDrum(off, master, reverb, inst('drums'), s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel, when, drumOpts, delay);
     } else if (typeof tracks.drums === 'object' && !Array.isArray(tracks.drums)) {
-      if (tracks.drums.kick && tracks.drums.kick[s]) eng.scheduleDrum(off, master, reverb, inst('drums'), 'kick', vel, when, drumOpts);
-      if (tracks.drums.snare && tracks.drums.snare[s]) eng.scheduleDrum(off, master, reverb, inst('drums'), 'snare', vel, when, drumOpts);
-      if (tracks.drums.hat && tracks.drums.hat[s]) eng.scheduleDrum(off, master, reverb, inst('drums'), 'hat', vel, when, drumOpts);
+      if (tracks.drums.kick && tracks.drums.kick[s]) eng.scheduleDrum(off, master, reverb, inst('drums'), 'kick', vel, when, drumOpts, delay);
+      if (tracks.drums.snare && tracks.drums.snare[s]) eng.scheduleDrum(off, master, reverb, inst('drums'), 'snare', vel, when, drumOpts, delay);
+      if (tracks.drums.hat && tracks.drums.hat[s]) eng.scheduleDrum(off, master, reverb, inst('drums'), 'hat', vel, when, drumOpts, delay);
     }
   }
   const rendered = await off.startRendering();

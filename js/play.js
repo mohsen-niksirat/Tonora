@@ -28,6 +28,7 @@ const PlayMode = {
           <button class="btn oct-btn" id="oct-up" title="${t('octave')} +">▶</button>
         </div>
         <button class="btn toggle-btn" id="sustain-btn" title="Space">🦶 ${t('sustain')}</button>
+        <button class="btn toggle-btn" id="arp-btn" title="Hold notes to arpeggiate">🎶 Arp</button>
         <button class="btn" id="rec-btn" title="Record live session">⏺ ${t('record')}</button>
         <div class="midi-box hidden" id="midi-box"></div>
       </div>
@@ -52,6 +53,30 @@ const PlayMode = {
     if (susBtn) {
       susBtn.onclick = () => {
         if (this.piano) this.piano.setSustain(!this.piano.sustain);
+      };
+    }
+    this.arpActive = false;
+    this.arpTimer = null;
+    this.arpIndex = 0;
+    const arpBtn = root.querySelector('#arp-btn');
+    if (arpBtn) {
+      arpBtn.onclick = () => {
+        this.arpActive = !this.arpActive;
+        arpBtn.classList.toggle('active', this.arpActive);
+        if (!this.arpActive && this.arpTimer) {
+          clearInterval(this.arpTimer);
+          this.arpTimer = null;
+        } else if (this.arpActive) {
+          this.arpTimer = setInterval(() => {
+            if (!this.piano || this.piano.activeKeys.size === 0) return;
+            const keys = Array.from(this.piano.activeKeys).sort((a,b) => noteToFreq(a) - noteToFreq(b));
+            if (keys.length === 0) return;
+            this.arpIndex = (this.arpIndex + 1) % keys.length;
+            const note = keys[this.arpIndex];
+            const def = this.inst(this.current);
+            window.TonoraAudio.playNote(def, note, 0.15, 0.8, 0, {}, window.TonoraAudio.delay);
+          }, 150); // ~100bpm 16th notes
+        }
       };
     }
     const recBtn = root.querySelector('#rec-btn');
@@ -211,5 +236,7 @@ const PlayMode = {
     if (this.piano) { this.piano.destroy(); this.piano = null; }
     if (this._cleanupDrumKeys) { this._cleanupDrumKeys(); this._cleanupDrumKeys = null; }
     if (this.midi && this.midi.input) this.midi.input.onmidimessage = null;
+    if (this.arpTimer) { clearInterval(this.arpTimer); this.arpTimer = null; }
+    this.arpActive = false;
   }
 };

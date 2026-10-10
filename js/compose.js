@@ -22,6 +22,11 @@ const ComposeMode = {
         <label>${t('tempo')}: <input type="number" id="cmp-bpm" min="40" max="240" value="${this.bpm}" style="width:5em"></label>
         <label>${t('velocity')}: <input type="range" id="cmp-vel" min="0.4" max="1" step="0.05" value="${this.velocity}" style="width:7em"></label>
         <span class="cmp-dur" id="cmp-dur" title="${t('duration')}"></span>
+        <select class="btn" id="cmp-len" style="font-size:0.8rem; padding:0.35rem 0.5rem">
+          <option value="16">16 Steps (1 Bar)</option>
+          <option value="32">32 Steps (2 Bars)</option>
+          <option value="64">64 Steps (4 Bars)</option>
+        </select>
         <select class="btn" id="cmp-presets" style="font-size:0.8rem; padding:0.35rem 0.5rem">
           <option value="">✨ ${t('presets')}</option>
           <option value="pop">Pop Groove</option>
@@ -49,6 +54,17 @@ const ComposeMode = {
       this.bpm = Math.max(40, Math.min(240, +e.target.value || 120));
       e.target.value = this.bpm;
       this.updateDuration();
+    };
+    const lenSelect = root.querySelector('#cmp-len');
+    lenSelect.value = this.steps;
+    lenSelect.onchange = e => {
+      const newLen = parseInt(e.target.value);
+      if (newLen !== this.steps) {
+        this.steps = newLen;
+        this.resizeTracks();
+        this.buildRoll();
+        this.updateDuration();
+      }
     };
     root.querySelector('#cmp-vel').oninput = e => { this.velocity = +e.target.value; this.tracks.velocity = this.velocity; };
     const swingBtn = root.querySelector('#cmp-swing');
@@ -214,6 +230,7 @@ const ComposeMode = {
       const raw = localStorage.getItem('tonora-compose');
       if (raw) {
         const d = JSON.parse(raw);
+        if (d.steps) this.steps = d.steps;
         if (d.tracks) { this.tracks = this.normalizeTracks(d.tracks); this.bpm = d.bpm || 120; }
         if (d.tracks && d.tracks.velocity !== undefined) this.velocity = d.tracks.velocity;
       }
@@ -239,6 +256,20 @@ const ComposeMode = {
     }
     const mix = tr.mixer || { melody: { vol: 1, pan: 0 }, bass: { vol: 1, pan: 0 }, drums: { vol: 1, pan: 0 } };
     return { melody: fix(tr.melody), drums: d, bass: fix(tr.bass), mixer: mix, velocity: tr.velocity };
+  },
+
+  resizeTracks() {
+    const r = (arr, def) => {
+      if (arr.length > this.steps) return arr.slice(0, this.steps);
+      return [...arr, ...new Array(this.steps - arr.length).fill(def)];
+    };
+    this.tracks.melody = r(this.tracks.melody || [], null);
+    this.tracks.bass = r(this.tracks.bass || [], null);
+    if (this.tracks.drums && typeof this.tracks.drums === 'object' && !Array.isArray(this.tracks.drums)) {
+      this.tracks.drums.kick = r(this.tracks.drums.kick || [], false);
+      this.tracks.drums.snare = r(this.tracks.drums.snare || [], false);
+      this.tracks.drums.hat = r(this.tracks.drums.hat || [], false);
+    }
   },
 
   buildRoll() {
@@ -386,7 +417,7 @@ const ComposeMode = {
 
   save() {
     this.tracks.velocity = this.velocity;
-    localStorage.setItem('tonora-compose', JSON.stringify({ bpm: this.bpm, tracks: this.tracks }));
+    localStorage.setItem('tonora-compose', JSON.stringify({ bpm: this.bpm, steps: this.steps, tracks: this.tracks }));
     const b = document.getElementById('cmp-save');
     b.textContent = '✓';
     setTimeout(() => b.textContent = t('save'), 1200);
@@ -395,7 +426,7 @@ const ComposeMode = {
 
   exportSong() {
     this.tracks.velocity = this.velocity;
-    const data = JSON.stringify({ app: 'tonora', type: 'song', bpm: this.bpm, tracks: this.tracks }, null, 2);
+    const data = JSON.stringify({ app: 'tonora', type: 'song', bpm: this.bpm, steps: this.steps, tracks: this.tracks }, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -428,6 +459,11 @@ const ComposeMode = {
       try {
         const d = JSON.parse(r.result);
         if (d.type === 'song' && d.tracks) {
+          if (d.steps) {
+            this.steps = d.steps;
+            const lenSel = document.getElementById('cmp-len');
+            if (lenSel) lenSel.value = this.steps;
+          }
           this.tracks = this.normalizeTracks(d.tracks);
           if (d.tracks.velocity !== undefined) { this.velocity = d.tracks.velocity; document.getElementById('cmp-vel').value = this.velocity; }
           this.bpm = d.bpm || 120;

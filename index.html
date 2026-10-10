@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
 <title>Tonora 🎹</title>
-<link rel="stylesheet" href="css/style.css?v=8">
+<link rel="stylesheet" href="css/style.css?v=9">
 </head>
 <body>
 <header>
@@ -22,6 +22,10 @@
   <div class="vol-wrap" title="Reverb (Echo)">
     <span class="vol-icon">🌊</span>
     <input type="range" id="rev-slider" min="0" max="1" step="0.05" value="0.18">
+  </div>
+  <div class="vol-wrap" title="Delay (Feedback)">
+    <span class="vol-icon">🔁</span>
+    <input type="range" id="del-slider" min="0" max="1" step="0.05" value="0">
   </div>
   <canvas id="vis-canvas" width="64" height="24" title="Audio Visualizer"></canvas>
   <button class="icon-btn" id="kb-btn" title="Shortcuts">⌨️</button>
@@ -51,13 +55,13 @@
   </div>
 </div>
 
-<script src="js/i18n.js?v=8"></script>
-<script src="js/achievements.js?v=8"></script>
-<script src="js/audio.js?v=8"></script>
-<script src="js/piano.js?v=8"></script>
-<script src="js/play.js?v=8"></script>
-<script src="js/learn.js?v=8"></script>
-<script src="js/compose.js?v=8"></script>
+<script src="js/i18n.js?v=9"></script>
+<script src="js/achievements.js?v=9"></script>
+<script src="js/audio.js?v=9"></script>
+<script src="js/piano.js?v=9"></script>
+<script src="js/play.js?v=9"></script>
+<script src="js/learn.js?v=9"></script>
+<script src="js/compose.js?v=9"></script>
 <script>
 'use strict';
 window.__jsErrors = [];
@@ -68,8 +72,8 @@ let INSTRUMENTS = [], SONGS = [];
 
 async function loadData() {
   const [i, s] = await Promise.all([
-    fetch('data/instruments.json?v=8').then(r => r.json()),
-    fetch('data/songs.json?v=8').then(r => r.json())
+    fetch('data/instruments.json?v=9').then(r => r.json()),
+    fetch('data/songs.json?v=9').then(r => r.json())
   ]);
   INSTRUMENTS = i.instruments;
   SONGS = s.songs;
@@ -106,6 +110,7 @@ function switchMode(id) {
   if (currentMode === 'learn') LearnMode.leave();
   if (currentMode === 'compose') ComposeMode.leave();
   currentMode = id;
+  document.body.classList.toggle('home-active', id === 'home');
   renderTabs();
   TonoraAchievements.touchStreak();
   if (typeof window.armAudioRevive === 'function') window.armAudioRevive();
@@ -181,6 +186,18 @@ if (revSlider) {
   if (savedRev !== null) revSlider.value = savedRev;
 }
 
+// Delay control
+const delSlider = document.getElementById('del-slider');
+if (delSlider) {
+  delSlider.oninput = e => {
+    const v = +e.target.value;
+    window.TonoraAudio.setDelayGain(v);
+    localStorage.setItem('tonora-delay', v);
+  };
+  const savedDel = localStorage.getItem('tonora-delay');
+  if (savedDel !== null) delSlider.value = savedDel;
+}
+
 // Visualizer canvas animation loop
 const visCanvas = document.getElementById('vis-canvas');
 if (visCanvas) {
@@ -226,6 +243,8 @@ loadData().then(() => {
   if (savedVol !== null) window.TonoraAudio.setMasterGain(+savedVol);
   const savedRev = localStorage.getItem('tonora-reverb');
   if (savedRev !== null) window.TonoraAudio.setReverbGain(+savedRev);
+  const savedDel = localStorage.getItem('tonora-delay');
+  if (savedDel !== null) window.TonoraAudio.setDelayGain(+savedDel);
   document.documentElement.lang = getLang();
   document.documentElement.dir = getLang() === 'fa' ? 'rtl' : 'ltr';
   document.getElementById('lang-btn').textContent = getLang() === 'fa' ? '🌐 EN' : '🌐 FA';
