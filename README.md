@@ -5,6 +5,7 @@
 Tonora is a client-side music studio: play virtual instruments, learn famous songs with falling notes, and compose your own multi-track pieces. No server, no accounts — everything runs locally.
 
 **▶ Try it:** https://mohsen-niksirat.github.io/tonora/
+**🇮🇷 [نسخه فارسی](README-fa.md)**
 
 ## Features
 - 🎹 **Play** — Piano, Guitar (Karplus–Strong), Synth, Music Box, Flute (FM), Celesta & Drums. Touch, mouse and PC keyboard support.
