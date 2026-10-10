@@ -3,7 +3,7 @@
 
 const I18N = {
   en: {
-    play: 'Play', learn: 'Learn', compose: 'Compose',
+    play: 'Play', learn: 'Learn', compose: 'Compose', theory: 'Theory',
     chooseSong: 'Choose a song', level: 'Level', start: 'Start',
     back: 'Back', listen: 'Listen', yourTurn: 'Your turn!',
     score: 'Score', combo: 'Combo', perfect: 'Perfect!', good: 'Good', miss: 'Miss',
@@ -33,7 +33,7 @@ const I18N = {
     recSaved: 'Recording saved!'
   },
   fa: {
-    play: 'اجرا', learn: 'آموزش', compose: 'آهنگسازی',
+    play: 'اجرا', learn: 'آموزش', compose: 'آهنگسازی', theory: 'تئوری',
     chooseSong: 'یک آهنگ انتخاب کن', level: 'سطح', start: 'شروع',
     back: 'بازگشت', listen: 'گوش کن', yourTurn: 'نوبت تو!',
     score: 'امتیاز', combo: 'کمبو', perfect: 'عالی!', good: 'خوب', miss: 'از دست رفت',
