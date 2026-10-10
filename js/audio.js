@@ -157,22 +157,32 @@ class AudioEngine {
   }
 
   /* Play a note on an instrument definition. dur in seconds (0 = sustain), optional when */
-  playNote(instDef, note, dur = 0, vel = 0.8, when = 0) {
+  playNote(instDef, note, dur = 0, vel = 0.8, when = 0, opts = {}) {
     const ctx = this.ensure();
     this.guard();
     const t = when > 0 ? when : ctx.currentTime;
-    return this.scheduleNote(ctx, this.master, this.reverb, instDef, note, dur, vel, t);
+    return this.scheduleNote(ctx, this.master, this.reverb, instDef, note, dur, vel, t, opts);
   }
 
   /* Core synthesis — works on any BaseAudioContext (live or offline) */
-  scheduleNote(ctx, master, reverb, instDef, note, dur = 0, vel = 0.8, when = 0) {
+  scheduleNote(ctx, master, reverb, instDef, note, dur = 0, vel = 0.8, when = 0, opts = {}) {
     const t = when;
     const freq = typeof note === 'number' ? note : noteToFreq(note);
     const g = ctx.createGain();
-    g.connect(master);
-    if (reverb) g.connect(reverb);
+    
+    let outNode = g;
+    if (opts.pan && ctx.createStereoPanner) {
+      const panner = ctx.createStereoPanner();
+      panner.pan.value = opts.pan;
+      g.connect(panner);
+      outNode = panner;
+    }
+    
+    outNode.connect(master);
+    if (reverb) outNode.connect(reverb);
+    
     const a = instDef.adsr || { a: 0.01, d: 0.3, s: 0.5, r: 0.2 };
-    const peak = vel * 0.5;
+    const peak = vel * 0.5 * (opts.vol ?? 1.0);
     const end = dur > 0 ? t + dur : t + 1.5;
 
     let naturalDur = 0;   // >0 when the source buffer carries its own decay
@@ -299,7 +309,7 @@ class AudioEngine {
         break;
       }
       case 'drumkit':
-        return this.scheduleDrum(ctx, master, reverb, instDef, note, vel, t);
+        return this.scheduleDrum(ctx, master, reverb, instDef, note, vel, t, opts);
     }
     const stop = end + (a.r || 0.3) + 0.1;
     // Envelope: karplus buffers already contain their own pluck decay, so we
@@ -324,18 +334,30 @@ class AudioEngine {
     return { stop: () => { try { g.gain.cancelScheduledValues(ctx.currentTime); g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.05); nodes.forEach(n => n.stop(ctx.currentTime + 0.3)); } catch (e) {} } };
   }
 
-  playDrum(instDef, padId, vel = 0.9, when = 0) {
+  playDrum(instDef, padId, vel = 0.9, when = 0, opts = {}) {
     const ctx = this.ensure();
     this.guard();
     const t = when > 0 ? when : ctx.currentTime;
-    return this.scheduleDrum(ctx, this.master, this.reverb, instDef, padId, vel, t);
+    return this.scheduleDrum(ctx, this.master, this.reverb, instDef, padId, vel, t, opts);
   }
 
-  scheduleDrum(ctx, master, reverb, instDef, padId, vel, when) {
+  scheduleDrum(ctx, master, reverb, instDef, padId, vel, when, opts = {}) {
     const t = when;
     const g = ctx.createGain();
-    g.connect(master);
-    if (reverb) g.connect(reverb);
+    
+    let outNode = g;
+    if (opts.pan && ctx.createStereoPanner) {
+      const panner = ctx.createStereoPanner();
+      panner.pan.value = opts.pan;
+      g.connect(panner);
+      outNode = panner;
+    }
+    
+    outNode.connect(master);
+    if (reverb) outNode.connect(reverb);
+    
+    vel = vel * (opts.vol ?? 1.0);
+    
     const noise = (dur) => {
       const b = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
       const d = b.getChannelData(0);
@@ -500,18 +522,28 @@ async function renderCompositionToWav(tracks, bpm, steps, swing) {
     if (swing) dur *= (s % 2 === 0) ? 1.33 : 0.67;
     currentWhen += dur;
 
+    const melOpts = tracks.mixer?.melody || { vol: 1, pan: 0 };
+    const bassOpts = tracks.mixer?.bass || { vol: 1, pan: 0 };
+    const drumOpts = tracks.mixer?.drums || { vol: 1, pan: 0 };
+
     const mel = tracks.melody[s];
     if (mel) {
       const notesArr = Array.isArray(mel) ? mel : [mel];
-      notesArr.forEach(n => eng.scheduleNote(off, master, reverb, inst('piano'), n, dur * 2, vel, when));
+      notesArr.forEach(n => eng.scheduleNote(off, master, reverb, inst('piano'), n, dur * 2, vel, when, melOpts));
     }
     const bass = tracks.bass[s];
     if (bass) {
       const notesArr = Array.isArray(bass) ? bass : [bass];
-      notesArr.forEach(n => eng.scheduleNote(off, master, reverb, inst('synth'), n, dur * 3, vel, when));
+      notesArr.forEach(n => eng.scheduleNote(off, master, reverb, inst('synth'), n, dur * 3, vel, when, bassOpts));
     }
-    if (tracks.drums[s]) {
-      eng.scheduleDrum(off, master, reverb, inst('drums'), s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel, when);
+    
+    // Check old style single drum array, or new style dict
+    if (tracks.drums[s] === true) {
+      eng.scheduleDrum(off, master, reverb, inst('drums'), s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel, when, drumOpts);
+    } else if (typeof tracks.drums === 'object' && !Array.isArray(tracks.drums)) {
+      if (tracks.drums.kick && tracks.drums.kick[s]) eng.scheduleDrum(off, master, reverb, inst('drums'), 'kick', vel, when, drumOpts);
+      if (tracks.drums.snare && tracks.drums.snare[s]) eng.scheduleDrum(off, master, reverb, inst('drums'), 'snare', vel, when, drumOpts);
+      if (tracks.drums.hat && tracks.drums.hat[s]) eng.scheduleDrum(off, master, reverb, inst('drums'), 'hat', vel, when, drumOpts);
     }
   }
   const rendered = await off.startRendering();

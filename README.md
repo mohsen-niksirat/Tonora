@@ -22,6 +22,11 @@ Tonora is a client-side music studio: play virtual instruments, learn famous son
 
 ## Changelog
 
+### v5.0 (DAW Edition) — Channel Rack, Mixer Console, Stereo Panning
+- 🎚️ **Mixer Console** — added a real-time track mixer to Compose mode with independent Volume and Stereo Panning (Left/Right) sliders for Melody, Bass, and Drums (works in both live playback and offline WAV export).
+- 🥁 **Multi-Track Drum Rack** — the single drum line in Compose mode has been exploded into a true Channel Rack (Kick, Snare, Hi-hat), allowing for complex beat programming like FL Studio.
+- 🎨 **Sequencer UI Overhaul** — steps are now styled and color-coded in groups of 4 (classic FL Studio aesthetic) for better beat visibility.
+
 ### v4.0 (The Ultimate Edition) — E-Guitar, Swing rhythm, Particles & Reverb control
 - 🎸 **Electric Guitar (Distortion)** — brand new instrument (`eguitar`) using `WaveShaperNode` for heavy, saturated overdrive tones.
 - 🎵 **Swing Rhythm in Sequencer** — added a "Swing" toggle in Compose mode, adding a humanized, lopsided groove to your drum beats and melodies (affects both live playback and WAV export).

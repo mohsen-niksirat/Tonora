@@ -29,6 +29,7 @@ const ComposeMode = {
           <option value="lofi">Lofi Chill</option>
         </select>
         <button class="btn toggle" id="cmp-swing" title="Swing Rhythm">🎵 Swing</button>
+        <button class="btn" id="cmp-mixer-btn">🎚️ Mixer</button>
         <button class="btn toggle" id="mute-mel" title="Mute melody">🎹 ${t('melody')}</button>
         <button class="btn toggle" id="mute-drm" title="Mute drums">🥁 ${t('drums')}</button>
         <button class="btn toggle" id="mute-bass" title="Mute bass">🌈 ${t('bass')}</button>
@@ -37,6 +38,8 @@ const ComposeMode = {
         <button class="btn" id="cmp-wav">${t('exportWav')}</button>
         <label class="btn file-btn">${t('import')}<input type="file" id="cmp-import" accept=".json" hidden></label>
         <button class="btn danger" id="cmp-clear">${t('clear')}</button>
+      </div>
+      <div id="cmp-mixer-panel" class="hidden" style="background:var(--bg2); padding:1rem; border-radius:0.5rem; margin-bottom:1rem; display:flex; gap:1.5rem; border:1px solid rgba(255,255,255,0.1)">
       </div>
       <div class="roll-wrap" id="roll"></div>
     `;
@@ -75,10 +78,42 @@ const ComposeMode = {
     root.querySelector('#cmp-import').onchange = e => this.importSong(e.target.files[0]);
     root.querySelector('#cmp-clear').onclick = () => {
       if (confirm(t('confirmClear'))) {
-        this.tracks = { melody: new Array(this.steps).fill(null), drums: new Array(this.steps).fill(false), bass: new Array(this.steps).fill(null), velocity: this.velocity };
+        this.tracks = this.normalizeTracks({ melody: [], bass: [], drums: { kick:[], snare:[], hat:[] }, velocity: this.velocity });
         this.buildRoll();
       }
     };
+    
+    // Mixer Logic
+    const mixerBtn = root.querySelector('#cmp-mixer-btn');
+    const mixerPanel = root.querySelector('#cmp-mixer-panel');
+    mixerBtn.onclick = () => {
+      mixerPanel.classList.toggle('hidden');
+      mixerBtn.classList.toggle('active');
+    };
+    
+    const buildMixerUI = () => {
+      mixerPanel.innerHTML = '';
+      const mkStrip = (id, name, icon) => {
+        const mix = this.tracks.mixer[id] || { vol: 1, pan: 0 };
+        const el = document.createElement('div');
+        el.style.display = 'flex'; el.style.flexDirection = 'column'; el.style.gap = '0.5rem'; el.style.alignItems = 'center';
+        el.innerHTML = `
+          <strong>${icon} ${name}</strong>
+          <label style="font-size:0.75rem; color:var(--muted)">Vol: <input type="range" class="${id}-vol" min="0" max="2" step="0.1" value="${mix.vol}" style="width:50px"></label>
+          <label style="font-size:0.75rem; color:var(--muted)">Pan: <input type="range" class="${id}-pan" min="-1" max="1" step="0.1" value="${mix.pan}" style="width:50px"></label>
+        `;
+        el.querySelector(`.${id}-vol`).oninput = e => { this.tracks.mixer[id].vol = +e.target.value; };
+        el.querySelector(`.${id}-pan`).oninput = e => { this.tracks.mixer[id].pan = +e.target.value; };
+        mixerPanel.appendChild(el);
+      };
+      if (!this.tracks.mixer) this.tracks.mixer = { melody: {vol:1,pan:0}, bass: {vol:1,pan:0}, drums: {vol:1,pan:0} };
+      mkStrip('melody', t('melody'), '🎹');
+      mkStrip('drums', t('drums'), '🥁');
+      mkStrip('bass', t('bass'), '🌈');
+    };
+    buildMixerUI();
+    this.buildMixerUI = buildMixerUI;
+
     this.buildRoll();
     this.updateDuration();
   },
@@ -165,6 +200,7 @@ const ComposeMode = {
     const vIn = document.getElementById('cmp-vel');
     if (vIn) vIn.value = this.velocity;
     this.buildRoll();
+    if (this.buildMixerUI) this.buildMixerUI();
     this.updateDuration();
   },
 
@@ -184,10 +220,25 @@ const ComposeMode = {
     } catch (e) {}
   },
 
-  /* backward-compat: old format stores string|null per step; chords stored as arrays */
+  /* backward-compat: old format stores string|null per step; drums was a single boolean array */
   normalizeTracks(tr) {
     const fix = arr => (arr || []).map(v => Array.isArray(v) ? v : v);
-    return { melody: fix(tr.melody), drums: tr.drums || [], bass: fix(tr.bass), velocity: tr.velocity };
+    let d = tr.drums || [];
+    if (Array.isArray(d)) {
+      const kick = new Array(this.steps).fill(false);
+      const snare = new Array(this.steps).fill(false);
+      const hat = new Array(this.steps).fill(false);
+      for(let s=0; s<Math.min(this.steps, d.length); s++) {
+        if (d[s]) {
+          if (s % 8 === 0) kick[s] = true;
+          else if (s % 4 === 2) snare[s] = true;
+          else hat[s] = true;
+        }
+      }
+      d = { kick, snare, hat };
+    }
+    const mix = tr.mixer || { melody: { vol: 1, pan: 0 }, bass: { vol: 1, pan: 0 }, drums: { vol: 1, pan: 0 } };
+    return { melody: fix(tr.melody), drums: d, bass: fix(tr.bass), mixer: mix, velocity: tr.velocity };
   },
 
   buildRoll() {
@@ -205,9 +256,11 @@ const ComposeMode = {
       cells.forEach((cell) => row.appendChild(cell));
       roll.appendChild(row);
     };
-    const mkCell = (cls, on, cb, text='') => {
+    const mkCell = (cls, on, cb, s, text='') => {
       const c = document.createElement('button');
-      c.className = 'roll-cell ' + cls + (on ? ' on' : '');
+      // group by 4 steps (1 beat) for FL Studio aesthetic
+      const groupCls = Math.floor(s / 4) % 2 === 0 ? 'g1' : 'g2';
+      c.className = `roll-cell ${cls} ${groupCls} ${on ? 'on' : ''}`;
       if (text) c.textContent = text;
       c.onclick = cb;
       return c;
@@ -215,22 +268,27 @@ const ComposeMode = {
     // melody rows — chords: each row toggles independently
     notes.forEach(n => {
       const cells = this.tracks.melody.map((v, s) =>
-        mkCell('mel', this.stepHas(v, n), () => this.toggleNote('melody', s, n, 'piano', 0.3)));
+        mkCell('mel', this.stepHas(v, n), () => this.toggleNote('melody', s, n, 'piano', 0.3), s));
       mkRow(n, cells);
     });
-    // drums row
+    // drums rows (Channel Rack style)
     const drumDefs = window.TONORA_INSTRUMENTS.find(i => i.id === 'drums');
-    const dcells = this.tracks.drums.map((v, s) =>
-      mkCell('drm', v, () => {
-        this.tracks.drums[s] = !this.tracks.drums[s];
-        this.buildRoll();
-        if (this.tracks.drums[s]) window.TonoraAudio.playDrum(drumDefs, 'kick', 0.9);
-      }, '🥁'));
-    mkRow(t('drums'), dcells);
+    const mkDrumRow = (key, icon, sound) => {
+      const dcells = this.tracks.drums[key].map((v, s) =>
+        mkCell('drm', v, () => {
+          this.tracks.drums[key][s] = !this.tracks.drums[key][s];
+          this.buildRoll();
+          if (this.tracks.drums[key][s]) window.TonoraAudio.playDrum(drumDefs, sound, 0.9);
+        }, s, icon));
+      mkRow(key.toUpperCase(), dcells);
+    };
+    mkDrumRow('kick', '🥁', 'kick');
+    mkDrumRow('snare', '💥', 'snare');
+    mkDrumRow('hat', '🪘', 'hat');
     // bass rows
     bassNotes.forEach(n => {
       const cells = this.tracks.bass.map((v, s) =>
-        mkCell('bass', this.stepHas(v, n), () => this.toggleNote('bass', s, n, 'synth', 0.3)));
+        mkCell('bass', this.stepHas(v, n), () => this.toggleNote('bass', s, n, 'synth', 0.3), s));
       mkRow(n, cells);
     });
   },
@@ -294,19 +352,27 @@ const ComposeMode = {
 
   playStep(s) {
     const vel = this.velocity;
+    const mix = this.tracks.mixer || { melody: {vol:1,pan:0}, bass: {vol:1,pan:0}, drums: {vol:1,pan:0} };
     if (!this.muted || !this.muted.melody) {
       const m = this.tracks.melody[s];
       if (m) (Array.isArray(m) ? m : [m]).forEach(n =>
-        window.TonoraAudio.playNote(this.inst('piano'), n, this.stepDur() * 2, vel));
+        window.TonoraAudio.playNote(this.inst('piano'), n, this.stepDur() * 2, vel, 0, mix.melody));
     }
     if (!this.muted || !this.muted.bass) {
       const b = this.tracks.bass[s];
       if (b) (Array.isArray(b) ? b : [b]).forEach(n =>
-        window.TonoraAudio.playNote(this.inst('synth'), n, this.stepDur() * 3, vel));
+        window.TonoraAudio.playNote(this.inst('synth'), n, this.stepDur() * 3, vel, 0, mix.bass));
     }
-    if ((!this.muted || !this.muted.drums) && this.tracks.drums[s]) {
+    if (!this.muted || !this.muted.drums) {
       const d = this.inst('drums');
-      window.TonoraAudio.playDrum(d, s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel);
+      // back-compat
+      if (this.tracks.drums[s] === true) {
+        window.TonoraAudio.playDrum(d, s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel, 0, mix.drums);
+      } else if (typeof this.tracks.drums === 'object' && !Array.isArray(this.tracks.drums)) {
+        if (this.tracks.drums.kick && this.tracks.drums.kick[s]) window.TonoraAudio.playDrum(d, 'kick', vel, 0, mix.drums);
+        if (this.tracks.drums.snare && this.tracks.drums.snare[s]) window.TonoraAudio.playDrum(d, 'snare', vel, 0, mix.drums);
+        if (this.tracks.drums.hat && this.tracks.drums.hat[s]) window.TonoraAudio.playDrum(d, 'hat', vel, 0, mix.drums);
+      }
     }
   },
 
@@ -367,6 +433,7 @@ const ComposeMode = {
           this.bpm = d.bpm || 120;
           document.getElementById('cmp-bpm').value = this.bpm;
           this.buildRoll();
+          if (this.buildMixerUI) this.buildMixerUI();
           this.updateDuration();
         }
       } catch (e) { alert('Invalid file'); }

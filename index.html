@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
 <title>Tonora 🎹</title>
-<link rel="stylesheet" href="css/style.css?v=7">
+<link rel="stylesheet" href="css/style.css?v=8">
 </head>
 <body>
 <header>
@@ -51,13 +51,13 @@
   </div>
 </div>
 
-<script src="js/i18n.js?v=7"></script>
-<script src="js/achievements.js?v=7"></script>
-<script src="js/audio.js?v=7"></script>
-<script src="js/piano.js?v=7"></script>
-<script src="js/play.js?v=7"></script>
-<script src="js/learn.js?v=7"></script>
-<script src="js/compose.js?v=7"></script>
+<script src="js/i18n.js?v=8"></script>
+<script src="js/achievements.js?v=8"></script>
+<script src="js/audio.js?v=8"></script>
+<script src="js/piano.js?v=8"></script>
+<script src="js/play.js?v=8"></script>
+<script src="js/learn.js?v=8"></script>
+<script src="js/compose.js?v=8"></script>
 <script>
 'use strict';
 window.__jsErrors = [];
@@ -68,8 +68,8 @@ let INSTRUMENTS = [], SONGS = [];
 
 async function loadData() {
   const [i, s] = await Promise.all([
-    fetch('data/instruments.json?v=7').then(r => r.json()),
-    fetch('data/songs.json?v=7').then(r => r.json())
+    fetch('data/instruments.json?v=8').then(r => r.json()),
+    fetch('data/songs.json?v=8').then(r => r.json())
   ]);
   INSTRUMENTS = i.instruments;
   SONGS = s.songs;

@@ -138,14 +138,15 @@ main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width
 .roll-row { display: flex; gap: 2px; margin-bottom: 2px; }
 .roll-label { width: 3.2em; flex-shrink: 0; color: var(--muted); font-size: .7rem; display: flex; align-items: center; justify-content: flex-end; padding-inline-end: .3rem; }
 .roll-cell {
-  width: 22px; height: 26px; flex-shrink: 0; border: 1px solid rgba(255,255,255,.07);
+  width: 22px; height: 26px; flex-shrink: 0; border: none;
   background: var(--bg2); cursor: pointer; border-radius: 4px; padding: 0; font-size: .7rem;
 }
+.roll-cell.g1 { background: rgba(255, 255, 255, 0.05); }
+.roll-cell.g2 { background: rgba(255, 255, 255, 0.12); }
 .roll-cell.mel.on { background: var(--accent); }
 .roll-cell.drm.on { background: var(--danger); }
 .roll-cell.bass.on { background: var(--accent2); }
-.roll-cell.cur { outline: 2px solid #fff; }
-.roll-cell:nth-child(4n + 2) { margin-inline-start: 4px; border-inline-start: 1px solid rgba(255,255,255,.25); }
+.roll-cell.cur { box-shadow: inset 0 0 0 2px #fff; }
 
 /* Home */
 .home-hero { text-align: center; padding: 2rem 0 1rem; }
