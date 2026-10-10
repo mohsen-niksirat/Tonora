@@ -22,6 +22,13 @@ Tonora is a client-side music studio: play virtual instruments, learn famous son
 
 ## Changelog
 
+### v3.1 — live jam recorder, header visualizer, Setar & keyboard shortcuts modal
+- ⏺️ **Live Jam Session Recorder** — record your freeform performances, drum beats, and keyboard jams in real-time with one click; downloads directly as high-fidelity WebM audio.
+- 📊 **Real-time Audio Visualizer** — sleek frequency visualizer canvas in the top header reacting dynamically to every note, chord, and drum played.
+- 🪕 **Setar Instrument** — authentic Persian classical stringed instrument synthesized via high-damping Karplus–Strong physical modeling.
+- 🎶 **Tavallod Song** — added Anoushiravan Rohani's iconic celebration melody ("تولدت مبارک") to Learn mode lessons.
+- ⌨️ **Keyboard Shortcuts Modal** — added header shortcuts cheat sheet button (`⌨️`) mapping PC keys across both lower and higher octaves.
+
 ### v3.0 — studio master limiter, sustain pedal, presets & lesson summary
 - 🛡️ **Broadcast Master Limiter** — integrated studio-grade DynamicsCompressorNode across live output and offline WAV rendering to prevent digital clipping under dense polyphony.
 - 🔊 **Master Volume Control** — global volume slider in header with localStorage persistence.

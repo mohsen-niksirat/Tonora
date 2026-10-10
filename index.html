@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
 <title>Tonora 🎹</title>
-<link rel="stylesheet" href="css/style.css?v=5">
+<link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
 <header>
@@ -19,18 +19,41 @@
     <span class="vol-icon" id="vol-icon">🔊</span>
     <input type="range" id="vol-slider" min="0" max="1" step="0.05" value="0.7">
   </div>
+  <canvas id="vis-canvas" width="64" height="24" title="Audio Visualizer"></canvas>
+  <button class="icon-btn" id="kb-btn" title="Shortcuts">⌨️</button>
   <button class="icon-btn" id="theme-btn" title="Theme">🌓</button>
   <button class="icon-btn" id="lang-btn" title="Language">🌐</button>
 </header>
 <main id="app"></main>
 
-<script src="js/i18n.js?v=5"></script>
-<script src="js/achievements.js?v=5"></script>
-<script src="js/audio.js?v=5"></script>
-<script src="js/piano.js?v=5"></script>
-<script src="js/play.js?v=5"></script>
-<script src="js/learn.js?v=5"></script>
-<script src="js/compose.js?v=5"></script>
+<!-- Keyboard Shortcuts Modal -->
+<div id="kb-modal" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="kb-title">⌨️ Keyboard Shortcuts</h3>
+      <button class="btn icon-btn" id="kb-close">✕</button>
+    </div>
+    <div class="kb-table-wrap">
+      <table class="kb-table">
+        <tr><th>Key</th><th>Action</th></tr>
+        <tr><td><kbd>Tab</kbd> / <kbd>Q</kbd>–<kbd>U</kbd></td><td>Lower Octave (White keys)</td></tr>
+        <tr><td><kbd>1</kbd>–<kbd>7</kbd></td><td>Lower Octave (Black keys)</td></tr>
+        <tr><td><kbd>Z</kbd>–<kbd>M</kbd></td><td>Higher Octave (White keys)</td></tr>
+        <tr><td><kbd>S</kbd>, <kbd>D</kbd>, <kbd>G</kbd>, <kbd>H</kbd>, <kbd>J</kbd></td><td>Higher Octave (Black keys)</td></tr>
+        <tr><td><kbd>Space</kbd></td><td>Toggle Sustain Pedal</td></tr>
+        <tr><td><kbd>1</kbd>–<kbd>8</kbd> (Drums)</td><td>Trigger Drum Pads</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="js/i18n.js?v=6"></script>
+<script src="js/achievements.js?v=6"></script>
+<script src="js/audio.js?v=6"></script>
+<script src="js/piano.js?v=6"></script>
+<script src="js/play.js?v=6"></script>
+<script src="js/learn.js?v=6"></script>
+<script src="js/compose.js?v=6"></script>
 <script>
 'use strict';
 window.__jsErrors = [];
@@ -41,8 +64,8 @@ let INSTRUMENTS = [], SONGS = [];
 
 async function loadData() {
   const [i, s] = await Promise.all([
-    fetch('data/instruments.json?v=5').then(r => r.json()),
-    fetch('data/songs.json?v=5').then(r => r.json())
+    fetch('data/instruments.json?v=6').then(r => r.json()),
+    fetch('data/songs.json?v=6').then(r => r.json())
   ]);
   INSTRUMENTS = i.instruments;
   SONGS = s.songs;
@@ -140,6 +163,41 @@ if (volSlider) {
     volSlider.value = savedVol;
     if (volIcon) volIcon.textContent = +savedVol === 0 ? '🔇' : (+savedVol < 0.5 ? '🔉' : '🔊');
   }
+}
+
+// Visualizer canvas animation loop
+const visCanvas = document.getElementById('vis-canvas');
+if (visCanvas) {
+  const vCtx = visCanvas.getContext('2d');
+  function drawVis() {
+    requestAnimationFrame(drawVis);
+    const data = window.TonoraAudio.getVisualizerData();
+    vCtx.clearRect(0, 0, visCanvas.width, visCanvas.height);
+    if (!data) return;
+    const barWidth = (visCanvas.width / data.length) * 1.5;
+    let x = 0;
+    for (let i = 0; i < data.length; i++) {
+      const barHeight = (data[i] / 255) * visCanvas.height;
+      vCtx.fillStyle = `rgba(108, 140, 255, ${0.3 + (data[i] / 255) * 0.7})`;
+      vCtx.fillRect(x, visCanvas.height - barHeight, barWidth - 1, barHeight);
+      x += barWidth;
+      if (x > visCanvas.width) break;
+    }
+  }
+  drawVis();
+}
+
+// Shortcuts modal
+const kbBtn = document.getElementById('kb-btn');
+const kbModal = document.getElementById('kb-modal');
+const kbClose = document.getElementById('kb-close');
+if (kbBtn && kbModal && kbClose) {
+  kbBtn.onclick = () => {
+    document.getElementById('kb-title').textContent = `⌨️ ${t('shortcuts')}`;
+    kbModal.classList.remove('hidden');
+  };
+  kbClose.onclick = () => kbModal.classList.add('hidden');
+  kbModal.onclick = (e) => { if (e.target === kbModal) kbModal.classList.add('hidden'); };
 }
 
 // PWA

@@ -45,7 +45,11 @@ class AudioEngine {
       this.limiter.attack.value = 0.003;
       this.limiter.release.value = 0.15;
       this.master.connect(this.limiter);
-      this.limiter.connect(this.ctx.destination);
+      // Analyser for real-time visualizer
+      this.analyser = this.ctx.createAnalyser();
+      this.analyser.fftSize = 64;
+      this.limiter.connect(this.analyser);
+      this.analyser.connect(this.ctx.destination);
       // simple algorithmic reverb (noise impulse)
       this.reverb = this.ctx.createConvolver();
       this.reverb.buffer = makeReverbBuffer(this.ctx);
@@ -81,6 +85,43 @@ class AudioEngine {
       const v = Math.max(0, Math.min(1.2, val));
       this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.03);
     }
+  }
+
+  getVisualizerData() {
+    if (!this.analyser) return null;
+    if (!this._visData) this._visData = new Uint8Array(this.analyser.frequencyBinCount);
+    this.analyser.getByteFrequencyData(this._visData);
+    return this._visData;
+  }
+
+  startLiveRecording() {
+    this.ensure();
+    if (typeof MediaRecorder === 'undefined') return false;
+    if (this._mediaRecorder && this._mediaRecorder.state === 'recording') return false;
+    if (!this._recDest) {
+      this._recDest = this.ctx.createMediaStreamDestination();
+      this.limiter.connect(this._recDest);
+    }
+    this._recChunks = [];
+    const mime = (typeof MediaRecorder.isTypeSupported === 'function' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))
+      ? 'audio/webm;codecs=opus' : '';
+    this._mediaRecorder = mime ? new MediaRecorder(this._recDest.stream, { mimeType: mime }) : new MediaRecorder(this._recDest.stream);
+    this._mediaRecorder.ondataavailable = e => { if (e.data.size > 0) this._recChunks.push(e.data); };
+    this._mediaRecorder.start(200);
+    this._recStartTime = performance.now();
+    return true;
+  }
+
+  stopLiveRecording() {
+    return new Promise((resolve) => {
+      if (!this._mediaRecorder || this._mediaRecorder.state !== 'recording') { resolve(null); return; }
+      this._mediaRecorder.onstop = () => {
+        const dur = (performance.now() - this._recStartTime) / 1000;
+        const blob = new Blob(this._recChunks, { type: this._mediaRecorder.mimeType || 'audio/webm' });
+        resolve({ blob, dur });
+      };
+      this._mediaRecorder.stop();
+    });
   }
 
   showPausedToast() {

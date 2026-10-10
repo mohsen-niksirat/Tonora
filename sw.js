@@ -1,11 +1,11 @@
 /* Tonora service worker — offline-first */
-const CACHE = 'tonora-v5';
+const CACHE = 'tonora-v6';
 const ASSETS = [
   './', './index.html', './manifest.json',
-  './css/style.css?v=5',
-  './js/i18n.js?v=5', './js/achievements.js?v=5', './js/audio.js?v=5', './js/piano.js?v=5',
-  './js/play.js?v=5', './js/learn.js?v=5', './js/compose.js?v=5',
-  './data/instruments.json?v=5', './data/songs.json?v=5',
+  './css/style.css?v=6',
+  './js/i18n.js?v=6', './js/achievements.js?v=6', './js/audio.js?v=6', './js/piano.js?v=6',
+  './js/play.js?v=6', './js/learn.js?v=6', './js/compose.js?v=6',
+  './data/instruments.json?v=6', './data/songs.json?v=6',
   './icons/icon-192.png', './icons/icon-512.png'
 ];
 self.addEventListener('install', e => {

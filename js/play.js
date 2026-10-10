@@ -28,6 +28,7 @@ const PlayMode = {
           <button class="btn oct-btn" id="oct-up" title="${t('octave')} +">▶</button>
         </div>
         <button class="btn toggle-btn" id="sustain-btn" title="Space">🦶 ${t('sustain')}</button>
+        <button class="btn" id="rec-btn" title="Record live session">⏺ ${t('record')}</button>
         <div class="midi-box hidden" id="midi-box"></div>
       </div>
       <div id="play-surface" class="play-surface"></div>
@@ -51,6 +52,31 @@ const PlayMode = {
     if (susBtn) {
       susBtn.onclick = () => {
         if (this.piano) this.piano.setSustain(!this.piano.sustain);
+      };
+    }
+    const recBtn = root.querySelector('#rec-btn');
+    if (recBtn) {
+      recBtn.onclick = async () => {
+        if (window.TonoraAudio.isRecording) {
+          recBtn.classList.remove('recording');
+          recBtn.innerHTML = `⏺ ${t('record')}`;
+          const blob = await window.TonoraAudio.stopLiveRecording();
+          if (blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tonora-jam-${Date.now()}.webm`;
+            a.click();
+            URL.revokeObjectURL(url);
+            TonoraAchievements.unlock('exporter');
+          }
+        } else {
+          const started = window.TonoraAudio.startLiveRecording();
+          if (started) {
+            recBtn.classList.add('recording');
+            recBtn.innerHTML = `⏹ ${t('stopRec')}`;
+          }
+        }
       };
     }
     this.select('piano');
