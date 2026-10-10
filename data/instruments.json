@@ -57,6 +57,14 @@
       "adsr": {"a": 0.002, "d": 1.2, "s": 0.0, "r": 0.4}
     },
     {
+      "id": "eguitar",
+      "name": {"en": "E-Guitar", "fa": "گیتار برقی"},
+      "icon": "⚡",
+      "type": "distorted",
+      "drive": 250,
+      "adsr": {"a": 0.02, "d": 0.8, "s": 0.6, "r": 0.25}
+    },
+    {
       "id": "strings",
       "name": {"en": "Strings", "fa": "سازهای زهی"},
       "icon": "🎻",

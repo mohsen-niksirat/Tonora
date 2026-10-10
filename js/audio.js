@@ -87,6 +87,13 @@ class AudioEngine {
     }
   }
 
+  setReverbGain(val) {
+    if (this.reverbGain && this.ctx) {
+      const v = Math.max(0, Math.min(1.5, val));
+      this.reverbGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.03);
+    }
+  }
+
   getVisualizerData() {
     if (!this.analyser) return null;
     if (!this._visData) this._visData = new Uint8Array(this.analyser.frequencyBinCount);
@@ -270,6 +277,27 @@ class AudioEngine {
         });
         break;
       }
+      case 'distorted': {
+        const o = ctx.createOscillator();
+        o.type = instDef.wave || 'sawtooth';
+        o.frequency.value = freq;
+        const f = ctx.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.value = 2500; // roll off excessive fizz
+        const shaper = ctx.createWaveShaper();
+        const k = instDef.drive || 200;
+        const curve = new Float32Array(44100);
+        const deg = Math.PI / 180;
+        for (let i = 0; i < 44100; ++i) {
+          const x = (i * 2) / 44100 - 1;
+          curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+        }
+        shaper.curve = curve;
+        shaper.oversample = '4x';
+        o.connect(shaper); shaper.connect(f); f.connect(g);
+        o.start(t); nodes.push(o);
+        break;
+      }
       case 'drumkit':
         return this.scheduleDrum(ctx, master, reverb, instDef, note, vel, t);
     }
@@ -439,9 +467,9 @@ function audioBufferToWav(buffer) {
 }
 
 /* Render a compose-style composition offline and download as WAV */
-async function renderCompositionToWav(tracks, bpm, steps) {
-  const stepDur = 60 / bpm / 4;
-  const totalDur = steps * stepDur + 2.5; // tail for reverb/release
+async function renderCompositionToWav(tracks, bpm, steps, swing) {
+  const baseDur = 60 / bpm / 4;
+  const totalDur = steps * baseDur + 2.5; // tail for reverb/release
   const sr = 44100;
   const off = new OfflineAudioContext(2, Math.ceil(totalDur * sr), sr);
   const master = off.createGain();
@@ -457,22 +485,30 @@ async function renderCompositionToWav(tracks, bpm, steps) {
   const reverb = off.createConvolver();
   reverb.buffer = makeReverbBuffer(off);
   const rg = off.createGain();
-  rg.gain.value = 0.18;
+  // match global settings if defined, else fallback
+  const globalRev = localStorage.getItem('tonora-reverb');
+  rg.gain.value = globalRev !== null ? +globalRev : 0.18;
   reverb.connect(rg); rg.connect(master);
   const eng = window.TonoraAudio;
   const inst = id => window.TONORA_INSTRUMENTS.find(i => i.id === id);
   const vel = (tracks.velocity !== undefined) ? tracks.velocity : 0.8;
+  
+  let currentWhen = 0;
   for (let s = 0; s < steps; s++) {
-    const when = s * stepDur;
+    const when = currentWhen;
+    let dur = baseDur;
+    if (swing) dur *= (s % 2 === 0) ? 1.33 : 0.67;
+    currentWhen += dur;
+
     const mel = tracks.melody[s];
     if (mel) {
       const notesArr = Array.isArray(mel) ? mel : [mel];
-      notesArr.forEach(n => eng.scheduleNote(off, master, reverb, inst('piano'), n, stepDur * 2, vel, when));
+      notesArr.forEach(n => eng.scheduleNote(off, master, reverb, inst('piano'), n, dur * 2, vel, when));
     }
     const bass = tracks.bass[s];
     if (bass) {
       const notesArr = Array.isArray(bass) ? bass : [bass];
-      notesArr.forEach(n => eng.scheduleNote(off, master, reverb, inst('synth'), n, stepDur * 3, vel, when));
+      notesArr.forEach(n => eng.scheduleNote(off, master, reverb, inst('synth'), n, dur * 3, vel, when));
     }
     if (tracks.drums[s]) {
       eng.scheduleDrum(off, master, reverb, inst('drums'), s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel, when);

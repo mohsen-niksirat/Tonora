@@ -28,6 +28,7 @@ const ComposeMode = {
           <option value="synthwave">Synthwave</option>
           <option value="lofi">Lofi Chill</option>
         </select>
+        <button class="btn toggle" id="cmp-swing" title="Swing Rhythm">🎵 Swing</button>
         <button class="btn toggle" id="mute-mel" title="Mute melody">🎹 ${t('melody')}</button>
         <button class="btn toggle" id="mute-drm" title="Mute drums">🥁 ${t('drums')}</button>
         <button class="btn toggle" id="mute-bass" title="Mute bass">🌈 ${t('bass')}</button>
@@ -47,6 +48,12 @@ const ComposeMode = {
       this.updateDuration();
     };
     root.querySelector('#cmp-vel').oninput = e => { this.velocity = +e.target.value; this.tracks.velocity = this.velocity; };
+    const swingBtn = root.querySelector('#cmp-swing');
+    if (this.swing) swingBtn.classList.add('active');
+    swingBtn.onclick = () => {
+      this.swing = !this.swing;
+      swingBtn.classList.toggle('active', this.swing);
+    };
     root.querySelector('#cmp-presets').onchange = e => {
       if (e.target.value) { this.loadPreset(e.target.value); e.target.value = ''; }
     };
@@ -275,8 +282,12 @@ const ComposeMode = {
       prevCells.forEach(c => c.classList.remove('cur'));
       prevCells = rows.map(row => row.children[1 + s]).filter(Boolean);
       prevCells.forEach(c => c.classList.add('cur'));
+      
+      let dur = this.stepDur();
+      if (this.swing) dur *= (s % 2 === 0) ? 1.33 : 0.67;
+      
       this.step = (this.step + 1) % this.steps;
-      this.timer = setTimeout(tick, this.stepDur() * 1000);
+      this.timer = setTimeout(tick, dur * 1000);
     };
     tick();
   },
@@ -331,7 +342,7 @@ const ComposeMode = {
     btn.disabled = true;
     btn.textContent = t('rendering');
     try {
-      const blob = await window.renderCompositionToWav(this.tracks, this.bpm, this.steps);
+      const blob = await window.renderCompositionToWav(this.tracks, this.bpm, this.steps, this.swing);
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'tonora-composition.wav';

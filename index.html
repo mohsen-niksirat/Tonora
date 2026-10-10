@@ -19,6 +19,10 @@
     <span class="vol-icon" id="vol-icon">🔊</span>
     <input type="range" id="vol-slider" min="0" max="1" step="0.05" value="0.7">
   </div>
+  <div class="vol-wrap" title="Reverb (Echo)">
+    <span class="vol-icon">🌊</span>
+    <input type="range" id="rev-slider" min="0" max="1" step="0.05" value="0.18">
+  </div>
   <canvas id="vis-canvas" width="64" height="24" title="Audio Visualizer"></canvas>
   <button class="icon-btn" id="kb-btn" title="Shortcuts">⌨️</button>
   <button class="icon-btn" id="theme-btn" title="Theme">🌓</button>
@@ -165,6 +169,18 @@ if (volSlider) {
   }
 }
 
+// Reverb control
+const revSlider = document.getElementById('rev-slider');
+if (revSlider) {
+  revSlider.oninput = e => {
+    const v = +e.target.value;
+    window.TonoraAudio.setReverbGain(v);
+    localStorage.setItem('tonora-reverb', v);
+  };
+  const savedRev = localStorage.getItem('tonora-reverb');
+  if (savedRev !== null) revSlider.value = savedRev;
+}
+
 // Visualizer canvas animation loop
 const visCanvas = document.getElementById('vis-canvas');
 if (visCanvas) {
@@ -208,6 +224,8 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 loadData().then(() => {
   const savedVol = localStorage.getItem('tonora-volume');
   if (savedVol !== null) window.TonoraAudio.setMasterGain(+savedVol);
+  const savedRev = localStorage.getItem('tonora-reverb');
+  if (savedRev !== null) window.TonoraAudio.setReverbGain(+savedRev);
   document.documentElement.lang = getLang();
   document.documentElement.dir = getLang() === 'fa' ? 'rtl' : 'ltr';
   document.getElementById('lang-btn').textContent = getLang() === 'fa' ? '🌐 EN' : '🌐 FA';

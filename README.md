@@ -22,6 +22,12 @@ Tonora is a client-side music studio: play virtual instruments, learn famous son
 
 ## Changelog
 
+### v4.0 (The Ultimate Edition) — E-Guitar, Swing rhythm, Particles & Reverb control
+- 🎸 **Electric Guitar (Distortion)** — brand new instrument (`eguitar`) using `WaveShaperNode` for heavy, saturated overdrive tones.
+- 🎵 **Swing Rhythm in Sequencer** — added a "Swing" toggle in Compose mode, adding a humanized, lopsided groove to your drum beats and melodies (affects both live playback and WAV export).
+- ✨ **Particle Visual Effects** — hitting the correct keys in Learn mode now spawns dynamic, physics-based particles (Golden for Perfect, Green for Good) that fall across the screen.
+- 🌊 **Global Reverb Slider** — easily adjust the spatial acoustic echo of the entire app with a new real-time slider in the top header.
+
 ### v3.1 — live jam recorder, header visualizer, Setar & keyboard shortcuts modal
 - ⏺️ **Live Jam Session Recorder** — record your freeform performances, drum beats, and keyboard jams in real-time with one click; downloads directly as high-fidelity WebM audio.
 - 📊 **Real-time Audio Visualizer** — sleek frequency visualizer canvas in the top header reacting dynamically to every note, chord, and drum played.

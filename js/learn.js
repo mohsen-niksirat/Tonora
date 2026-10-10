@@ -239,7 +239,6 @@ const LearnMode = {
       const d = Math.abs(now - target);
       if (d < bestD) { bestD = d; best = { n, i, target }; }
     });
-    // scoring window scales with speed
     const win = 350 / this.speed;
     if (best && bestD < win && (best.n.n === note)) {
       this.hitIdx.add(best.i);
@@ -249,6 +248,14 @@ const LearnMode = {
       const pts = bestD < 120 / this.speed ? 100 : 50;
       this.score += pts + this.combo * 5;
       this.setStatus(bestD < 120 / this.speed ? t('perfect') : t('good'));
+      
+      const rect = this._keyRects && this._keyRects[note];
+      if (rect) {
+        const cv = document.getElementById('fall-canvas');
+        const dpr = devicePixelRatio;
+        this.spawnParticles(rect.x + rect.w/2, cv.height - (10 * dpr), bestD < 120 / this.speed);
+      }
+
       if (this.combo >= 100) TonoraAchievements.unlock('combo100');
     } else {
       this.combo = 0;
@@ -303,6 +310,22 @@ const LearnMode = {
     this.raf = requestAnimationFrame(() => this.loop());
   },
 
+  spawnParticles(x, y, perfect) {
+    if (!this.particles) this.particles = [];
+    const count = perfect ? 18 : 8;
+    const color = perfect ? '255, 215, 0' : '120, 220, 150';
+    for (let i = 0; i < count; i++) {
+      this.particles.push({
+        x: x + (Math.random() - 0.5) * 20,
+        y: y,
+        vx: (Math.random() - 0.5) * (perfect ? 8 : 4),
+        vy: -Math.random() * (perfect ? 8 : 5) - 2,
+        life: 1.0,
+        color: color
+      });
+    }
+  },
+
   draw(now, spb) {
     const c = this.ctx2d;
     if (!c) return;
@@ -311,6 +334,7 @@ const LearnMode = {
     if (!this.song) return;
     const lookAhead = 2500; // ms of travel
     const dpr = devicePixelRatio;
+    
     this.song.notes.forEach((n, i) => {
       const target = this.startTime + n.t * spb * 1000;
       const y = H - ((target - now) / lookAhead) * H;
@@ -327,6 +351,22 @@ const LearnMode = {
       c.strokeStyle = 'rgba(255,255,255,0.5)';
       c.strokeRect(x, y - h, w, h);
     });
+
+    // Draw and update particles
+    if (this.particles) {
+      for (let i = this.particles.length - 1; i >= 0; i--) {
+        const p = this.particles[i];
+        c.fillStyle = `rgba(${p.color}, ${p.life})`;
+        c.beginPath();
+        c.arc(p.x, p.y, 4 * dpr * p.life, 0, Math.PI * 2);
+        c.fill();
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.3; // gravity
+        p.life -= 0.03;
+        if (p.life <= 0) this.particles.splice(i, 1);
+      }
+    }
   },
 
   stop() {
