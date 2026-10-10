@@ -55,7 +55,7 @@ main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width
 .piano {
   display: flex; position: relative; height: min(38dvh, 240px); min-height: 170px;
   background: var(--bg2); border-radius: .8rem; padding: 6px; gap: 2px; margin-top: .5rem;
-  touch-action: none;
+  touch-action: none; direction: ltr !important;
 }
 .key { position: relative; cursor: pointer; }
 .key.white {
@@ -102,7 +102,7 @@ main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width
 .learn-status { flex: 1; text-align: center; font-weight: 700; color: var(--accent); min-width: 6em; }
 .learn-score { font-variant-numeric: tabular-nums; color: var(--muted); }
 /* canvas sits directly on top of the piano block — same width, zero gap */
-.learn-canvas-holder { position: relative; flex: 1; min-height: 28dvh; }
+.learn-canvas-holder { position: relative; flex: 1; min-height: 28dvh; direction: ltr !important; }
 .learn-canvas-holder canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
 .learn-stage { position: relative; display: flex; flex-direction: column; flex: 1; }
 .learn-modal {
@@ -125,7 +125,7 @@ main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width
 .sum-item strong { font-size: 1.15rem; color: var(--accent); }
 .summary-actions { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: center; }
 
-#learn-piano { margin-top: 0; }
+#learn-piano { margin-top: 0; direction: ltr !important; }
 #learn-piano .piano { margin-top: 0; border-radius: 0 0 .8rem .8rem; }
 
 /* Compose mode */
@@ -134,7 +134,7 @@ main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width
 .compose-hud input[type=number] { background: var(--card); border: 1px solid rgba(255,255,255,.1); color: var(--text); border-radius: .4rem; padding: .3rem; font: inherit; }
 .cmp-dur { font-size: .8rem; color: var(--accent); background: var(--bg2); padding: .35rem .6rem; border-radius: .4rem; font-variant-numeric: tabular-nums; border: 1px solid rgba(255,255,255,.08); }
 .file-btn { position: relative; overflow: hidden; }
-.roll-wrap { overflow-x: auto; padding-bottom: 1rem; }
+.roll-wrap { overflow-x: auto; padding-bottom: 1rem; direction: ltr !important; }
 .roll-row { display: flex; gap: 2px; margin-bottom: 2px; }
 .roll-label { width: 3.2em; flex-shrink: 0; color: var(--muted); font-size: .7rem; display: flex; align-items: center; justify-content: flex-end; padding-inline-end: .3rem; }
 .roll-cell {
