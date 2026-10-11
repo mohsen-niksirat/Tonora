@@ -45,8 +45,10 @@ header {
 .mode-tab.active { background: var(--card); color: var(--text); font-weight: 700; }
 .vol-wrap { display: flex; align-items: center; gap: .3rem; font-size: .85rem; color: var(--muted); }
 .vol-wrap input[type=range] { width: 4.8em; height: 4px; accent-color: var(--accent); cursor: pointer; }
-@media (max-width: 500px) { .vol-wrap input[type=range] { width: 3em; } }
 .icon-btn { background: none; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; padding: .3rem; }
+/* desktop: header extras join the header flex row directly */
+#hdr-extra { display: contents; }
+#more-btn { display: none; }
 main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width: 1000px; width: 100%; margin: 0 auto; }
 .btn {
   background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,.1);
@@ -258,6 +260,26 @@ html[dir="rtl"] .kb-table { text-align: right; }
   box-shadow: 1px 1px 2px rgba(0,0,0,0.3);
 }
 
+/* ---- Modal (was completely unstyled before v23) ---- */
+.modal {
+  position: fixed; inset: 0; z-index: 200; padding: 1rem;
+  background: rgba(8, 10, 20, .62); backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-box {
+  background: var(--card); color: var(--text);
+  border: 1px solid rgba(255,255,255,.14); border-radius: 1.1rem;
+  padding: 1rem 1.1rem; width: 100%; max-width: 540px; max-height: 80dvh; overflow-y: auto;
+  box-shadow: 0 18px 44px rgba(0,0,0,.5);
+  animation: popIn .22s cubic-bezier(.175,.885,.32,1.275);
+}
+.modal-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.modal-header h3 { margin: 0; font-size: 1.05rem; }
+
+/* ---- Compose secondary controls (collapsed behind ⋯ on mobile) ---- */
+#cmp-more { display: contents; }
+#cmp-more-btn { display: none; }
+
 /* ---- Theory mode ---- */
 .theory-wrap {
   display: flex; flex-direction: column; align-items: center;
@@ -302,4 +324,140 @@ html[dir="rtl"] .kb-table { text-align: right; }
 .theory-board .highlight polygon { fill: var(--accent) !important; stroke: var(--accent) !important; }
 .theory-board .highlight { filter: drop-shadow(0 0 6px var(--accent)); }
 .tonora-cursor { stroke: var(--accent); stroke-width: 2; }
+
+/* =========================================================================
+   MOBILE  (max-width: 767px) — added in v23
+   Minimal layout: slim header, bottom tab bar, collapsed secondary controls.
+   ========================================================================= */
+@media (max-width: 767px) {
+  /* ---------- shell ---------- */
+  header {
+    padding: .45rem .6rem calc(.45rem + env(safe-area-inset-top));
+    padding-inline: .6rem; gap: .4rem;
+  }
+  .logo { font-size: .95rem; }
+  #more-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 40px; min-height: 40px; font-size: 1.2rem; flex-shrink: 0;
+    margin-inline-start: auto;
+  }
+  #hdr-extra {
+    display: none; position: absolute; top: 100%; inset-inline: 0;
+    flex-direction: column; gap: .55rem; padding: .7rem .75rem;
+    background: var(--bg2); border-bottom: 1px solid rgba(255,255,255,.1);
+    box-shadow: 0 10px 24px rgba(0,0,0,.35); z-index: 20;
+  }
+  #hdr-extra.open { display: flex; }
+  #hdr-extra .vol-wrap input[type=range] { width: 100%; flex: 1; }
+  #hdr-extra #vis-canvas { width: 100%; height: 30px; }
+  #hdr-extra .icon-btn { min-width: 40px; min-height: 40px; }
+
+  /* bottom tab bar — always reachable with the thumb */
+  .mode-tabs {
+    position: fixed; bottom: 0; inset-inline: 0; flex: none;
+    background: var(--bg2); border-top: 1px solid rgba(255,255,255,.1);
+    justify-content: space-around; align-items: stretch; gap: 0;
+    padding: .3rem .2rem calc(.3rem + env(safe-area-inset-bottom));
+    z-index: 100; box-shadow: 0 -4px 16px rgba(0,0,0,.28);
+  }
+  .mode-tab {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0; padding: .3rem .1rem; min-height: 48px; font-size: .66rem; line-height: 1.15;
+    border-radius: .7rem;
+  }
+  .mode-tab span { font-size: 1.25rem; line-height: 1; }
+  .mode-tab.active { background: rgba(108,140,255,.16); }
+
+  main { padding: .5rem; padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+
+  /* ---------- piano ---------- */
+  .piano { height: min(32dvh, 200px); min-height: 132px; padding: 4px; gap: 1px; }
+  .key.black { width: 6.6%; top: 4px; }
+  .pc-hint { display: none; }
+  .key.white .key-label { font-size: .55rem; bottom: 3px; color: #777; }
+  .key.black .key-label { display: none; }
+
+  /* ---------- play ---------- */
+  .mode-head { gap: .35rem; }
+  .mode-head .inst-tabs { order: -1; width: 100%; flex: none; padding-bottom: .2rem; }
+  .oct-btn { min-width: 40px; min-height: 36px; }
+  .oct-lbl { min-width: 3.4em; font-size: .7rem; }
+  .drum-grid { gap: .45rem; padding: .6rem 0; }
+  .drum-pad { min-height: 96px; }
+
+  /* ---------- learn ---------- */
+  .learn-hud {
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+    padding-bottom: .35rem; gap: .3rem;
+  }
+  .learn-hud::-webkit-scrollbar { display: none; }
+  .learn-hud > * { flex-shrink: 0; }
+  .learn-status { min-width: 4.5em; font-size: .85rem; }
+  .learn-canvas-holder { min-height: 20dvh; }
+  .summary-card { padding: 1.1rem 1rem; max-width: 100%; gap: .7rem; }
+  #songs { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+
+  /* ---------- compose ---------- */
+  .compose-hud { gap: .35rem; padding-bottom: .4rem; }
+  #cmp-more-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 44px; min-height: 40px; font-size: 1.15rem;
+  }
+  #cmp-more-btn.active {
+    color: var(--text); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent);
+  }
+  #cmp-more { display: none; }
+  #cmp-more.open { display: flex; flex-wrap: wrap; gap: .35rem; width: 100%; }
+  .roll-cell { width: 26px; height: 32px; }
+  .roll-label { font-size: .6rem; }
+
+  /* ---------- theory ---------- */
+  .theory-wrap { gap: .55rem; padding: .6rem; }
+  .theory-head { gap: .5rem; }
+  .theory-tabs {
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+    width: 100%; padding-bottom: .25rem;
+  }
+  .theory-tabs::-webkit-scrollbar { display: none; }
+  .theory-tab { flex-shrink: 0; padding: .4rem .7rem; font-size: .78rem; }
+  .theory-board { min-height: 108px; padding: .5rem .6rem; }
+  .theory-mystery { font-size: 2.6rem; }
+  .theory-choice { min-width: 0; flex: 1 1 45%; }
+  .theory-prompt { font-size: .95rem; }
+  .theory-blurb { font-size: .82rem; }
+
+  /* ---------- home ---------- */
+  .home-hero { padding: 1.1rem 0 .7rem; }
+  .home-hero h1 { font-size: 1.6rem; }
+  .mode-cards { gap: .55rem; }
+  .mode-card { padding: .9rem; }
+  .mode-card .big { font-size: 1.7rem; }
+  .ach-grid { grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); gap: .45rem; }
+
+  /* ---------- touch targets & misc ---------- */
+  .btn, .song-card, .inst-tab, .theory-tab, .mode-card { min-height: 40px; }
+  .ach-toast {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    max-width: calc(100vw - 1.5rem); text-align: center; font-size: .85rem;
+    padding: .55rem .9rem;
+  }
+  .modal { padding: .75rem; align-items: flex-end; }
+  .modal-box { max-height: 86dvh; border-radius: 1.1rem 1.1rem 0 0; }
+  dialog { min-width: 0; max-width: 94vw; }
+
+  /* bigger range thumbs — the default 4px track is unusable with a finger */
+  input[type=range], .vol-wrap input[type=range] {
+    -webkit-appearance: none; appearance: none; background: transparent; height: 22px;
+  }
+  input[type=range]::-webkit-slider-runnable-track { height: 4px; background: rgba(255,255,255,.18); border-radius: 999px; }
+  input[type=range]::-moz-range-track { height: 4px; background: rgba(255,255,255,.18); border-radius: 999px; }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 22px; height: 22px; margin-top: -9px;
+    border-radius: 50%; background: var(--accent); border: 2px solid #fff; cursor: pointer;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 20px; height: 20px; border: 2px solid #fff;
+    border-radius: 50%; background: var(--accent); cursor: pointer;
+  }
+}
 

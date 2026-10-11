@@ -57,13 +57,15 @@ const ComposeMode = {
         <button class="btn" id="cmp-undo" title="Undo (Ctrl+Z)">↶</button>
         <button class="btn" id="cmp-redo" title="Redo (Ctrl+Y)">↷</button>
         <label>${t('tempo')}: <input type="number" id="cmp-bpm" min="40" max="240" value="${this.bpm}" style="width:5em"></label>
-        <label>${t('velocity')}: <input type="range" id="cmp-vel" min="0.4" max="1" step="0.05" value="${this.velocity}" style="width:7em"></label>
         <span class="cmp-dur" id="cmp-dur" title="${t('duration')}"></span>
         <select class="btn" id="cmp-len" style="font-size:0.8rem; padding:0.35rem 0.5rem">
           <option value="16">16 Steps (1 Bar)</option>
           <option value="32">32 Steps (2 Bars)</option>
           <option value="64">64 Steps (4 Bars)</option>
         </select>
+        <button class="btn" id="cmp-more-btn" title="${t('more')}" aria-expanded="false">⋯</button>
+        <div id="cmp-more">
+        <label>${t('velocity')}: <input type="range" id="cmp-vel" min="0.4" max="1" step="0.05" value="${this.velocity}" style="width:7em"></label>
         <select class="btn" id="cmp-presets" style="font-size:0.8rem; padding:0.35rem 0.5rem">
           <option value="">✨ ${t('presets')}</option>
           <option value="pop">Pop Groove</option>
@@ -89,6 +91,7 @@ const ComposeMode = {
         <button class="btn" id="cmp-saveas" title="${t('saveAs')}">＋</button>
         <button class="btn danger" id="cmp-delproj" title="${t('delete')}">🗑</button>
         <button class="btn danger" id="cmp-clear">${t('clear')}</button>
+        </div>
       </div>
       <div id="cmp-mixer-panel" class="hidden" style="background:var(--bg2); padding:1rem; border-radius:0.5rem; margin-bottom:1rem; display:flex; gap:1.5rem; border:1px solid rgba(255,255,255,0.1)">
       </div>
@@ -98,6 +101,15 @@ const ComposeMode = {
     root.querySelector('#cmp-stop').onclick = () => this.stop();
     root.querySelector('#cmp-undo').onclick = () => this.undo();
     root.querySelector('#cmp-redo').onclick = () => this.redo();
+    const moreBtn = root.querySelector('#cmp-more-btn');
+    const moreBox = root.querySelector('#cmp-more');
+    if (moreBtn && moreBox) {
+      moreBtn.onclick = () => {
+        const open = moreBox.classList.toggle('open');
+        moreBtn.setAttribute('aria-expanded', String(open));
+        moreBtn.classList.toggle('active', open);
+      };
+    }
     if (this._onKey) document.removeEventListener('keydown', this._onKey);
     this._onKey = (e) => {
       const tag = (e.target && e.target.tagName) || '';

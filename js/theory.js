@@ -39,13 +39,19 @@ const TheoryMode = {
         <div id="th-piano" class="theory-piano"></div>
       </div>`;
     this.renderTabs();
-    this.setupPiano();
     if (!window.TonoraNotation || !window.TonoraNotation.available()) {
       const board = document.getElementById('th-board');
       if (board) board.innerHTML = `<p class="muted">${t('theoryOffline')}</p>`;
     }
     this.updateScore();
     if (this.lesson) this.startLesson(this.lesson);
+    // narrow screens rebuild the keyboard when the viewport crosses the breakpoint
+    this._onResize = () => {
+      const narrow = this._isNarrow();
+      if (narrow === this._narrowBuilt) return;
+      this.setupPiano(this.lesson);
+    };
+    window.addEventListener('resize', this._onResize);
   },
 
   renderTabs() {
@@ -62,19 +68,71 @@ const TheoryMode = {
     });
   },
 
-  setupPiano() {
+  setupPiano(lesson) {
     const el = document.getElementById('th-piano');
     if (!el) return;
+    const narrow = this._isNarrow();
+    this._narrowBuilt = narrow;
+    // Wide screens always get 3 octaves from C3. Narrow screens get 2 octaves
+    // placed so every note this lesson can ask for is on the keyboard —
+    // e.g. `intervals` reaches C5 while `minor-triad` reaches down to E3.
+    const win = narrow ? this.pianoWindow(lesson || this.lesson) : null;
+    if (this.piano) { this.piano.destroy(); this.piano = null; }
     this.piano = new PianoUI(el, {
-      octaves: 3,
-      startOctave: 3,
+      octaves: win ? win.octaves : 3,
+      startOctave: win ? win.startOctave : 3,
       onNote: (n) => this.onPianoNote(n)
     });
+  },
+
+  _isNarrow() {
+    return typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767px)').matches;
+  },
+
+  /* MIDI number of a note name. C4 = 60 (middle C). */
+  _midiOf(name) {
+    const m = /^([A-G])([#b]?)(-?\d)$/.exec(String(name || ''));
+    if (!m) return NaN;
+    const base = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]];
+    const acc = m[2] === '#' ? 1 : (m[2] === 'b' ? -1 : 0);
+    return base + acc + (parseInt(m[3], 10) + 1) * 12;
+  },
+
+  /* Smallest 2-octave window that contains every note the lesson can ask for.
+     Returns null when the lesson needs no keyboard (ear training is answered
+     with buttons). */
+  pianoWindow(lesson) {
+    if (!lesson) return null;
+    const T = window.TonoraTheory;
+    if (!T) return null;
+    const notes = [];
+    const add = q => {
+      const exp = T.expectedFor(lesson, q);
+      if (Array.isArray(exp)) exp.forEach(n => notes.push(n));
+    };
+    if (lesson.type === 'note') lesson.pool.forEach(n => add(n));
+    else if (lesson.type === 'interval') lesson.intervals.forEach(i => add({ interval: i }));
+    else if (lesson.type === 'chord') lesson.roots.forEach(r => add({ root: r }));
+    else if (lesson.type === 'scale') add({});
+    else return null; // ear
+    // the root is played too, so keep it visible alongside the answer
+    if (lesson.root) notes.push(lesson.root);
+    (lesson.roots || []).forEach(r => notes.push(r));
+
+    const midis = notes.map(n => this._midiOf(n)).filter(Number.isFinite);
+    if (!midis.length) return null;
+    const lo = Math.min.apply(null, midis);
+    const hi = Math.max.apply(null, midis);
+    const startOctave = Math.max(1, Math.floor(lo / 12) - 1);
+    const startMidi = (startOctave + 1) * 12; // MIDI of C in that octave
+    const octaves = Math.max(2, Math.ceil((hi - startMidi + 1) / 12));
+    return { startOctave, octaves };
   },
 
   startLesson(lesson) {
     this.lesson = lesson;
     this.stopPlayback();
+    this.setupPiano(lesson);
     document.querySelectorAll('.theory-tab').forEach(b => b.classList.toggle('active', b.dataset.id === lesson.id));
     const blurb = document.getElementById('th-blurb');
     if (blurb) blurb.textContent = lesson.blurb[getLang()] || lesson.blurb.en;
@@ -266,6 +324,8 @@ const TheoryMode = {
 
   leave() {
     this.stopPlayback();
+    if (this._onResize) { window.removeEventListener('resize', this._onResize); this._onResize = null; }
+    this._narrowBuilt = null;
     if (this.piano) { this.piano.destroy(); this.piano = null; }
     this.visual = null;
     this.question = null;
