@@ -160,8 +160,11 @@ const PlayMode = {
           if (b) b.classList.toggle('active', active);
         }
       });
-      // resume audio context on first interaction (autoplay policy)
-      document.body.addEventListener('pointerdown', () => window.TonoraAudio.ensure(), { once: true });
+      // resume audio context on first interaction (autoplay policy) — bind once
+      if (!this._unlockBound) {
+        this._unlockBound = true;
+        document.body.addEventListener('pointerdown', () => window.TonoraAudio.ensure(), { once: true });
+      }
       this.armRevive();
     }
   },
