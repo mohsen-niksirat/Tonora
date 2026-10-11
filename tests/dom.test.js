@@ -28,8 +28,8 @@ if (!window.localStorage) {
 }
 
 const files = [
-  'i18n.js', 'achievements.js', 'audio.js', 'midi.js', 'backing.js',
-  'piano.js', 'play.js', 'learn.js', 'compose.js', 'theory.js'
+  'i18n.js', 'achievements.js', 'audio.js', 'midi.js', 'backing.js', 'theory-content.js',
+  'notation.js', 'piano.js', 'play.js', 'learn.js', 'compose.js', 'theory.js'
 ];
 let source = files.map(f => fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8')).join('\n;\n');
 // export a few module objects from the shared script scope for assertions
@@ -82,6 +82,22 @@ test('backing generator runs inside the browser scope', () => {
   const res = window.__test.TonoraBacking.buildBacking(song);
   assert.strictEqual(res.keyName, 'C');
   assert.strictEqual(res.bars.length, 1);
+});
+
+test('theory curriculum and notation wrapper load in the browser', () => {
+  assert.ok(window.TonoraTheory && Array.isArray(window.TonoraTheory.THEORY_LESSONS));
+  assert.ok(window.TonoraTheory.THEORY_LESSONS.length >= 5);
+  assert.ok(window.TonoraNotation && typeof window.TonoraNotation.noteToAbc === 'function');
+  // In ABC, middle C (C4) is uppercase C; C5 is lowercase c; C3 is C,
+  assert.strictEqual(window.TonoraNotation.noteToAbc('C4'), 'C');
+  assert.strictEqual(window.TonoraNotation.noteToAbc('C5'), 'c');
+  assert.strictEqual(window.TonoraNotation.noteToAbc('C3'), 'C,');
+  assert.strictEqual(window.TonoraNotation.noteToAbc('F#4'), '^F');
+});
+
+test('theory answer-checking works via the browser global', () => {
+  const r = window.TonoraTheory.validateAnswer({ type: 'chord', quality: 'maj' }, { root: 'C4' }, ['C4', 'E4', 'G4']);
+  assert.strictEqual(r.correct, true);
 });
 
 if (process.exitCode) {

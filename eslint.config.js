@@ -20,8 +20,9 @@ const projectGlobals = {
   t: 'readonly', getLang: 'readonly', setLang: 'readonly', noteToFreq: 'readonly',
   PianoUI: 'readonly', TonoraAchievements: 'readonly', armAudioRevive: 'readonly',
   ComposeMode: 'readonly', LearnMode: 'readonly', PlayMode: 'readonly', TheoryMode: 'readonly',
-  Vex: 'readonly', Tonal: 'readonly',
-  buildMidiFile: 'readonly', midiToTracks: 'readonly', TonoraBacking: 'readonly'
+  Vex: 'readonly', Tonal: 'readonly', ABCJS: 'readonly',
+  buildMidiFile: 'readonly', midiToTracks: 'readonly', TonoraBacking: 'readonly',
+  TonoraNotation: 'readonly', TonoraTheory: 'readonly', midiToNoteName: 'readonly'
 };
 
 module.exports = [

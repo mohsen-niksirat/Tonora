@@ -5,6 +5,7 @@ const { noteToFreq, NOTE_OFFSET, audioBufferToWav } = require('../js/audio.js');
 const { noteNameToMidi, vlq, buildMidiFile } = require('../js/midi.js');
 const { parseMidiFile, midiToTracks, midiToNoteName } = require('../js/midi.js');
 const { buildBacking, pcToNote, inferKeyRoot, pcOf } = require('../js/backing.js');
+const { expectedFor, validateAnswer, scaleNotes, chordNotes, noteTranspose } = require('../js/theory-content.js');
 
 let passed = 0;
 function test(name, fn) {
@@ -135,6 +136,31 @@ test('buildMidiFile → parseMidiFile round-trips note events', () => {
   assert.strictEqual(back.tracks.drums.kick[0], true);
   assert.strictEqual(back.tracks.drums.hat[1], true);
   assert.strictEqual(back.tracks.drums.hat[3], true);
+});
+
+test('chordNotes builds a C major triad', () => {
+  assert.deepStrictEqual(chordNotes('C4', 'maj'), ['C4', 'E4', 'G4']);
+  assert.deepStrictEqual(chordNotes('A3', 'min'), ['A3', 'C4', 'E4']);
+});
+
+test('noteTranspose moves a perfect fifth up', () => {
+  assert.strictEqual(noteTranspose('C4', '5P'), 'G4');
+});
+
+test('scaleNotes returns the seven C-major notes in order', () => {
+  assert.deepStrictEqual(scaleNotes('C major', 3), ['C3', 'D3', 'E3', 'F3', 'G3', 'A3', 'B3']);
+});
+
+test('validateAnswer accepts the correct chord and rejects wrong notes', () => {
+  const lesson = { type: 'chord', quality: 'maj' };
+  assert.strictEqual(validateAnswer(lesson, { root: 'C4' }, ['C4', 'E4', 'G4']).correct, true);
+  assert.strictEqual(validateAnswer(lesson, { root: 'C4' }, ['C4', 'E4']).correct, false);
+  assert.strictEqual(validateAnswer(lesson, { root: 'C4' }, ['C4', 'E4', 'G4', 'B4']).correct, false);
+});
+
+test('expectedFor resolves an interval question', () => {
+  const lesson = { type: 'interval', root: 'C4' };
+  assert.deepStrictEqual(expectedFor(lesson, { interval: '3M' }), ['E4']);
 });
 
 if (process.exitCode) {

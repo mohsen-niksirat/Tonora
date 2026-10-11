@@ -255,6 +255,42 @@ html[dir="rtl"] .kb-table { text-align: right; }
 .kb-table kbd {
   background: var(--bg); border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 4px; padding: 2px 5px; font-size: .75rem; font-family: monospace;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  box-shadow: 1px 1px 2px rgba(0,0,0,0.3);
 }
+
+/* ---- Theory mode ---- */
+.theory-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 1rem; padding: 1.2rem; flex: 1; width: 100%;
+}
+.theory-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; width: 100%; max-width: 860px; flex-wrap: wrap;
+}
+.theory-tabs { display: flex; gap: .4rem; flex-wrap: wrap; }
+.theory-tab {
+  background: var(--card); border: 1px solid rgba(255,255,255,0.12); color: var(--muted);
+  border-radius: 999px; padding: .4rem .85rem; font-size: .82rem; cursor: pointer; transition: all .15s;
+}
+.theory-tab:hover { color: var(--text); border-color: var(--accent); }
+.theory-tab.active {
+  color: var(--text); font-weight: 700; border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent); background: linear-gradient(90deg, rgba(108,140,255,.18), rgba(180,108,255,.18));
+}
+.theory-score { font-size: 1.1rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.theory-blurb { color: var(--muted); font-size: .9rem; text-align: center; max-width: 720px; }
+.theory-prompt { font-size: 1.05rem; font-weight: 600; text-align: center; min-height: 1.6em; }
+.theory-board {
+  width: 100%; max-width: 820px; min-height: 150px;
+  background: var(--card); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 1rem; padding: .8rem 1rem; display: flex; align-items: center; justify-content: center;
+  overflow-x: auto;
+}
+.theory-board svg { max-width: 100%; }
+.theory-actions { display: flex; gap: .6rem; }
+.theory-piano { width: 100%; max-width: 860px; }
+.theory-piano .piano { margin-top: 0; }
+.abcjs-note.highlight path, .abcjs-note.highlight rect { fill: var(--accent) !important; }
+.abcjs-note.highlight { filter: drop-shadow(0 0 6px var(--accent)); }
+.tonora-cursor { stroke: var(--accent); stroke-width: 2; }
 

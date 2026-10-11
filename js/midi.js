@@ -204,7 +204,10 @@ function midiToTracks(input, steps) {
   return { bpm: parsed.bpm, steps, tracks: { melody, bass, drums } };
 }
 
-if (typeof window !== 'undefined') window.midiToTracks = midiToTracks;
+if (typeof window !== 'undefined') {
+  window.midiToTracks = midiToTracks;
+  window.midiToNoteName = midiToNoteName;
+}
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { noteNameToMidi, vlq, buildMidiFile, parseMidiFile, midiToTracks, midiToNoteName };
 }

@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "eslint": "^9.0.0",
-    "jsdom": "^24.0.0"
+    "jsdom": "^24.0.0",
+    "tonal": "^6.4.0"
   }
 }

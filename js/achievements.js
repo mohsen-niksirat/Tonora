@@ -7,6 +7,7 @@ const ACHIEVEMENTS = [
   { id: 'composer',   icon: '🎛️' },
   { id: 'exporter',   icon: '💾' },
   { id: 'midi',       icon: '🎹' },
+  { id: 'theorist',   icon: '🎼' },
   { id: 'streak3',    icon: '📅' }
 ];
 

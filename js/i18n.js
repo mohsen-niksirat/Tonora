@@ -23,6 +23,7 @@ const I18N = {
     ach_composer: 'Composer', ach_composer_d: 'Save your first composition',
     ach_exporter: 'Exporter', ach_exporter_d: 'Export your first WAV',
     ach_midi: 'MIDI Master', ach_midi_d: 'Play a note via MIDI',
+    ach_theorist: 'Theory Student', ach_theorist_d: 'Answer a theory question correctly',
     ach_streak3: '3-Day Streak', ach_streak3_d: 'Play 3 days in a row',
     confirmClear: 'Clear all notes?', duration: 'Duration',
     playAgain: 'Play Again', nextSong: 'Next Song', octave: 'Octave',
@@ -33,7 +34,11 @@ const I18N = {
     importMidi: 'Import MIDI', projects: 'Projects', saveAs: 'Save as project', delete: 'Delete',
     projectName: 'Project name:', confirmDelete: 'Delete this project?',
     record: 'Record', stopRec: 'Stop & Save', shortcuts: 'Keyboard Shortcuts',
-    recSaved: 'Recording saved!'
+    recSaved: 'Recording saved!',
+    theoryOffline: 'Theory lessons need an internet connection to load the notation engine.',
+    playThisNote: 'Read the note and play it on the keyboard',
+    playInterval: 'Play the note', above: 'above', playChord: 'Play the chord', playScale: 'Play the scale',
+    minor: 'Minor', major: 'Major', hearIt: 'Hear it', skip: 'Skip', correct: 'Correct!', tryAgain: 'Try again'
   },
   fa: {
     play: 'اجرا', learn: 'آموزش', compose: 'آهنگسازی', theory: 'تئوری',
@@ -56,6 +61,7 @@ const I18N = {
     ach_composer: 'آهنگساز', ach_composer_d: 'اولین آهنگت را ذخیره کن',
     ach_exporter: 'خروجی‌گیر', ach_exporter_d: 'اولین WAV را خروجی بگیر',
     ach_midi: 'استاد میدی', ach_midi_d: 'یک نت با میدی بزن',
+    ach_theorist: 'دانشجوی تئوری', ach_theorist_d: 'به یک سؤال تئوری درست پاسخ بده',
     ach_streak3: '۳ روز پیاپی', ach_streak3_d: '۳ روز پشت هم اجرا کن',
     confirmClear: 'همه نت‌ها پاک شوند؟', duration: 'مدت',
     playAgain: 'تکرار درس', nextSong: 'آهنگ بعدی', octave: 'اکتاو',
@@ -66,7 +72,11 @@ const I18N = {
     importMidi: 'ورودی MIDI', projects: 'پروژه‌ها', saveAs: 'ذخیره به‌عنوان پروژه', delete: 'حذف',
     projectName: 'نام پروژه:', confirmDelete: 'این پروژه حذف شود؟',
     record: 'ضبط زنده', stopRec: 'توقف و ذخیره', shortcuts: 'کلیدهای میانبر',
-    recSaved: 'فایل صوتی ذخیره شد!'
+    recSaved: 'فایل صوتی ذخیره شد!',
+    theoryOffline: 'درس‌های تئوری برای بارگذاری موتور نت به اینترنت نیاز دارند.',
+    playThisNote: 'نت را بخوان و روی کیبورد بنواز',
+    playInterval: 'نت را بنواز', above: 'بالای', playChord: 'آکورد را بنواز', playScale: 'گام را بنواز',
+    minor: 'مینور', major: 'ماژور', hearIt: 'بشنو', skip: 'رد کردن', correct: 'درست است!', tryAgain: 'دوباره تلاش کن'
   }
 };
 
