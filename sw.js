@@ -1,12 +1,12 @@
 /* Tonora service worker — offline-first */
-const CACHE = 'tonora-v18';
+const CACHE = 'tonora-v19';
 const ASSETS = [
   './', './index.html', './manifest.json',
-  './css/style.css?v=18',
-  './js/i18n.js?v=18', './js/achievements.js?v=18', './js/audio.js?v=18', './js/piano.js?v=18',
-  './js/play.js?v=18', './js/learn.js?v=18', './js/compose.js?v=18', './js/theory.js?v=18',
-  './js/midi.js?v=18', './js/backing.js?v=18', './js/theory-content.js?v=18', './js/notation.js?v=18',
-  './data/instruments.json?v=18', './data/songs.json?v=18',
+  './css/style.css?v=19',
+  './js/i18n.js?v=19', './js/achievements.js?v=19', './js/audio.js?v=19', './js/piano.js?v=19',
+  './js/play.js?v=19', './js/learn.js?v=19', './js/compose.js?v=19', './js/theory.js?v=19',
+  './js/midi.js?v=19', './js/backing.js?v=19', './js/theory-content.js?v=19', './js/notation.js?v=19',
+  './data/instruments.json?v=19', './data/songs.json?v=19',
   './icons/icon-192.png', './icons/icon-512.png'
 ];
 self.addEventListener('install', e => {

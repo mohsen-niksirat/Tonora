@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
 <title>Tonora 🎹</title>
-<link rel="stylesheet" href="css/style.css?v=18">
+<link rel="stylesheet" href="css/style.css?v=19">
 </head>
 <body>
 <header>
@@ -57,18 +57,18 @@
 
 <script src="https://cdn.jsdelivr.net/npm/abcjs@6.7.1/dist/abcjs-basic-min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tonal@6.4.0/browser/tonal.min.js"></script>
-<script src="js/i18n.js?v=18"></script>
-<script src="js/achievements.js?v=18"></script>
-<script src="js/audio.js?v=18"></script>
-<script src="js/piano.js?v=18"></script>
-<script src="js/play.js?v=18"></script>
-<script src="js/learn.js?v=18"></script>
-<script src="js/backing.js?v=18"></script>
-<script src="js/midi.js?v=18"></script>
-<script src="js/compose.js?v=18"></script>
-<script src="js/theory-content.js?v=18"></script>
-<script src="js/notation.js?v=18"></script>
-<script src="js/theory.js?v=18"></script>
+<script src="js/i18n.js?v=19"></script>
+<script src="js/achievements.js?v=19"></script>
+<script src="js/audio.js?v=19"></script>
+<script src="js/piano.js?v=19"></script>
+<script src="js/play.js?v=19"></script>
+<script src="js/learn.js?v=19"></script>
+<script src="js/backing.js?v=19"></script>
+<script src="js/midi.js?v=19"></script>
+<script src="js/compose.js?v=19"></script>
+<script src="js/theory-content.js?v=19"></script>
+<script src="js/notation.js?v=19"></script>
+<script src="js/theory.js?v=19"></script>
 <script>
 'use strict';
 window.__jsErrors = [];
@@ -79,8 +79,8 @@ let INSTRUMENTS = [], SONGS = [];
 
 async function loadData() {
   const [i, s] = await Promise.all([
-    fetch('data/instruments.json?v=18').then(r => r.json()),
-    fetch('data/songs.json?v=18').then(r => r.json())
+    fetch('data/instruments.json?v=19').then(r => r.json()),
+    fetch('data/songs.json?v=19').then(r => r.json())
   ]);
   INSTRUMENTS = i.instruments;
   SONGS = s.songs;
