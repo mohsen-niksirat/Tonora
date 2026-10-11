@@ -1,31 +1,61 @@
 const assert = require('assert');
 
-// A simple unit test to fulfill the repository health requirement
-console.log('Running basic tests...');
+// Load the REAL audio engine logic (pure helpers) instead of re-implementing it.
+const { noteToFreq, NOTE_OFFSET, audioBufferToWav } = require('../js/audio.js');
 
-function testNoteToFreqLogic(noteStr) {
-  // Mock logic of what's inside audio.js
-  const names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-  const p = noteStr.match(/([A-G]#?)(\d)/);
-  if (!p) return 0;
-  const noteIdx = names.indexOf(p[1]);
-  const oct = parseInt(p[2], 10);
-  const n = noteIdx + (oct + 1) * 12;
-  return 440 * Math.pow(2, (n - 69) / 12);
+let passed = 0;
+function test(name, fn) {
+  try {
+    fn();
+    passed++;
+    console.log(`✅ ${name}`);
+  } catch (err) {
+    console.error(`❌ ${name}: ${err.message}`);
+    process.exitCode = 1;
+  }
 }
 
-try {
-  const freqA4 = testNoteToFreqLogic('A4');
-  assert.strictEqual(freqA4, 440, 'A4 should be 440Hz');
-  console.log('✅ A4 frequency test passed.');
-  
-  const freqC4 = testNoteToFreqLogic('C4');
-  assert.ok(Math.abs(freqC4 - 261.63) < 0.1, 'C4 should be approx 261.63Hz');
-  console.log('✅ C4 frequency test passed.');
+test('A4 is 440Hz', () => {
+  assert.strictEqual(noteToFreq('A4'), 440);
+});
 
-  console.log('\nAll tests passed successfully! 🎉');
-  process.exit(0);
-} catch (err) {
-  console.error('❌ Test failed:', err.message);
-  process.exit(1);
+test('A3 is 220Hz (octave below)', () => {
+  assert.ok(Math.abs(noteToFreq('A3') - 220) < 0.001, `got ${noteToFreq('A3')}`);
+});
+
+test('C4 is ~261.63Hz', () => {
+  assert.ok(Math.abs(noteToFreq('C4') - 261.625565) < 0.01, `got ${noteToFreq('C4')}`);
+});
+
+test('sharps are one semitone above their natural', () => {
+  const ratio = noteToFreq('C#4') / noteToFreq('C4');
+  assert.ok(Math.abs(ratio - Math.pow(2, 1 / 12)) < 1e-9);
+});
+
+test('NOTE_OFFSET covers all twelve pitch classes', () => {
+  assert.strictEqual(Object.keys(NOTE_OFFSET).length, 12);
+});
+
+test('invalid note falls back to 440Hz', () => {
+  assert.strictEqual(noteToFreq('H9'), 440);
+});
+
+test('audioBufferToWav writes a valid RIFF/WAVE header', () => {
+  const frames = 100;
+  const fakeBuffer = {
+    numberOfChannels: 1,
+    length: frames,
+    sampleRate: 44100,
+    getChannelData: () => new Float32Array(frames).fill(0.5)
+  };
+  const blob = audioBufferToWav(fakeBuffer);
+  assert.strictEqual(blob.type, 'audio/wav');
+  // 44-byte header + 100 frames * 1 channel * 2 bytes
+  assert.strictEqual(blob.size, 44 + frames * 2);
+});
+
+if (process.exitCode) {
+  console.error(`\n${passed} passed, some failed.`);
+} else {
+  console.log(`\nAll ${passed} tests passed successfully! 🎉`);
 }

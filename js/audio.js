@@ -449,8 +449,10 @@ class AudioEngine {
   }
 }
 
-window.TonoraAudio = new AudioEngine();
-window.noteToFreq = noteToFreq;
+if (typeof window !== 'undefined') {
+  window.TonoraAudio = new AudioEngine();
+  window.noteToFreq = noteToFreq;
+}
 
 /* ---- Audio auto-revival ----
    A single document-level gesture listener that un-suspends the AudioContext.
@@ -470,7 +472,9 @@ function armAudioRevive() {
   evs.forEach(e => document.addEventListener(e, handler, { passive: true }));
   window._tonoraReviveOff = () => evs.forEach(e => document.removeEventListener(e, handler));
 }
-window.armAudioRevive = armAudioRevive;
+if (typeof window !== 'undefined') {
+  window.armAudioRevive = armAudioRevive;
+}
 
 
 /* ---- WAV export (OfflineAudioContext render → 16-bit PCM) ---- */
@@ -582,5 +586,12 @@ async function renderCompositionToWav(tracks, bpm, steps, swing) {
   const rendered = await off.startRendering();
   return audioBufferToWav(rendered);
 }
-window.renderCompositionToWav = renderCompositionToWav;
+if (typeof window !== 'undefined') {
+  window.renderCompositionToWav = renderCompositionToWav;
+}
+
+/* Expose pure helpers for Node-based unit tests. */
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { noteToFreq, NOTE_OFFSET, audioBufferToWav };
+}
 
