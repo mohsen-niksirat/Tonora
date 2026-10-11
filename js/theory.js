@@ -22,18 +22,25 @@ const TheoryMode = {
       </div>
     `;
 
-    // Initialize Piano
+    // Initialize Piano (PianoUI is the shared keyboard widget used by Play/Learn)
     const pContainer = document.getElementById('theory-piano');
-    this.piano = new Piano(pContainer, 3);
-    this.piano.onPress = (n) => this.checkNote(n);
+    this.piano = new PianoUI(pContainer, {
+      octaves: 2,
+      startOctave: 3,
+      onNote: (n) => this.checkNote(n)
+    });
 
     this.nextNote();
   },
 
   nextNote() {
-    const VF = Vex.Flow;
+    const VF = window.Vex && window.Vex.Flow;
     const container = document.getElementById('vex-container');
     container.innerHTML = '';
+    if (!VF) {
+      container.innerHTML = `<p class="muted">Sight-reading requires an internet connection (VexFlow).</p>`;
+      return;
+    }
     
     const renderer = new VF.Renderer(container, VF.Renderer.Backends.SVG);
     renderer.resize(250, 150);
@@ -80,11 +87,7 @@ const TheoryMode = {
       document.getElementById('th-score').textContent = this.score;
       document.getElementById('th-streak').textContent = this.streak;
       
-      const p = this.piano.svg.querySelector(`[data-note="${playedNote}"]`);
-      if (p) {
-        p.style.fill = 'var(--good)';
-        setTimeout(() => { p.style.fill = ''; }, 300);
-      }
+      this.piano.flash(playedNote);
       
       const def = window.TONORA_INSTRUMENTS.find(i => i.id === 'piano');
       window.TonoraAudio.playNote(def, playedNote, 0.5, 0.8);
