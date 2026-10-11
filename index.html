@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
 <title>Tonora 🎹</title>
-<link rel="stylesheet" href="css/style.css?v=9">
+<link rel="stylesheet" href="css/style.css?v=10">
 </head>
 <body>
 <header>
@@ -57,14 +57,14 @@
 
 <script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tonal/browser/tonal.min.js"></script>
-<script src="js/i18n.js?v=9"></script>
-<script src="js/achievements.js?v=9"></script>
-<script src="js/audio.js?v=9"></script>
-<script src="js/piano.js?v=9"></script>
-<script src="js/play.js?v=9"></script>
-<script src="js/learn.js?v=9"></script>
-<script src="js/compose.js?v=9"></script>
-<script src="js/theory.js?v=1"></script>
+<script src="js/i18n.js?v=10"></script>
+<script src="js/achievements.js?v=10"></script>
+<script src="js/audio.js?v=10"></script>
+<script src="js/piano.js?v=10"></script>
+<script src="js/play.js?v=10"></script>
+<script src="js/learn.js?v=10"></script>
+<script src="js/compose.js?v=10"></script>
+<script src="js/theory.js?v=10"></script>
 <script>
 'use strict';
 window.__jsErrors = [];
@@ -75,8 +75,8 @@ let INSTRUMENTS = [], SONGS = [];
 
 async function loadData() {
   const [i, s] = await Promise.all([
-    fetch('data/instruments.json?v=9').then(r => r.json()),
-    fetch('data/songs.json?v=9').then(r => r.json())
+    fetch('data/instruments.json?v=10').then(r => r.json()),
+    fetch('data/songs.json?v=10').then(r => r.json())
   ]);
   INSTRUMENTS = i.instruments;
   SONGS = s.songs;
