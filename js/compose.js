@@ -12,7 +12,7 @@ const ComposeMode = {
   step: 0,
 
   enter(root) {
-    this.tracks = { melody: new Array(this.steps).fill(null), drums: new Array(this.steps).fill(false), bass: new Array(this.steps).fill(null) };
+    this.tracks = this.normalizeTracks({ melody: new Array(this.steps).fill(null), bass: new Array(this.steps).fill(null), drums: new Array(this.steps).fill(false), velocity: this.velocity });
     this.muted = { melody: false, drums: false, bass: false };
     this.solo = { melody: false, drums: false, bass: false };
     this.loadSaved();
@@ -607,8 +607,10 @@ const ComposeMode = {
     this.tracks.velocity = this.velocity;
     localStorage.setItem('tonora-compose', JSON.stringify({ bpm: this.bpm, steps: this.steps, tracks: this.tracks }));
     const b = document.getElementById('cmp-save');
-    b.textContent = '✓';
-    setTimeout(() => b.textContent = t('save'), 1200);
+    if (b) {
+      b.textContent = '✓';
+      setTimeout(() => { if (b.isConnected) b.textContent = t('save'); }, 1200);
+    }
     TonoraAchievements.unlock('composer');
   },
 

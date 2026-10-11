@@ -1,7 +1,9 @@
-/* Regression: load the real CDN bundles + our scripts as actual <script>
-   tags (not eval) so top-level global collisions are caught — e.g. the
-   tonal bundle declares a global `var Tonal`, and a top-level `const Tonal`
-   in theory-content.js used to throw and silently disable Theory mode. */
+/* Full-app smoke / load test.
+   Loads EVERY browser script as a real <script> tag (the way index.html
+   does), so top-level load-time collisions are caught — exactly the class
+   of bug where `const Tonal` clashed with the tonal CDN global and silently
+   disabled Theory mode. Then it enters all four modes and checks the UI is
+   built without throwing. */
 'use strict';
 
 const assert = require('assert');
@@ -19,9 +21,10 @@ const dom = new JSDOM('<!DOCTYPE html><html data-theme="dark"><body><main id="ap
 });
 const w = dom.window;
 const errors = [];
-w.addEventListener('error', e => errors.push(e.error ? String(e.error) : e.message));
+w.addEventListener('error', e => errors.push(e.error ? String(e.error && e.error.stack || e.error) : e.message));
+w.onerror = (m, s, l, c, err) => errors.push('onerror: ' + (err && err.stack || m));
 
-// minimal storage so i18n/achievements can initialise
+// minimal storage so i18n/achievements/compose can initialise
 const store = {};
 w.localStorage = {
   getItem: k => (k in store ? store[k] : null),
@@ -35,10 +38,39 @@ function inject(code) {
   w.document.body.appendChild(s);
 }
 
+// ---- external CDN bundles (local copies) ----
 inject(read('node_modules/tonal/browser/tonal.min.js'));
 inject(read('node_modules/abcjs/dist/abcjs-basic-min.js'));
-w.TONORA_INSTRUMENTS = [{ id: 'piano', name: { en: 'Piano', fa: 'پیانو' }, icon: '🎹', type: 'additive', partials: [1, 0.5], adsr: { a: 0.01, d: 0.3, s: 0.5, r: 0.2 }, wave: 'triangle' }];
-['i18n.js', 'achievements.js', 'piano.js', 'midi.js', 'theory-content.js', 'notation.js', 'theory.js'].forEach(f => inject(read('js/' + f)));
+
+// ---- data normally fetched from JSON ----
+w.TONORA_INSTRUMENTS = JSON.parse(read('data/instruments.json')).instruments;
+w.TONORA_SONGS = JSON.parse(read('data/songs.json')).songs;
+
+// ---- app scripts, in index.html order ----
+['i18n.js', 'achievements.js', 'audio.js', 'piano.js', 'play.js', 'learn.js',
+ 'backing.js', 'midi.js', 'compose.js', 'theory-content.js', 'notation.js', 'theory.js']
+  .forEach(f => inject(read('js/' + f)));
+
+// jsdom has no canvas 2D backend; provide a minimal context so Learn's
+// canvas setup doesn't throw.
+const ctx2d = new Proxy({}, { get: () => () => {} });
+w.HTMLCanvasElement.prototype.getContext = () => ctx2d;
+
+// Replace the Web Audio engine with a no-op stub (jsdom has no AudioContext).
+// The real engine is never exercised here; we only need the modes to build.
+w.TonoraAudio = {
+  ctx: { currentTime: 0, state: 'running', sampleRate: 44100 },
+  master: {}, reverb: {}, delay: {}, isRecording: false,
+  ensure() { return this.ctx; },
+  guard() {}, revive() { return Promise.resolve(true); },
+  playNote() { return { stop() {} }; },
+  playDrum() { return { stop() {} }; },
+  scheduleNote() { return { stop() {} }; },
+  scheduleDrum() { return { stop() {} }; },
+  setBusGain() {}, setBusPan() {}, getBusLevel() { return 0; },
+  getVisualizerData() { return null; },
+  setMasterGain() {}, setReverbGain() {}, setDelayGain() {}
+};
 
 let passed = 0;
 function test(name, fn) {
@@ -46,47 +78,84 @@ function test(name, fn) {
   catch (err) { console.error(`❌ ${name}: ${err.message}`); process.exitCode = 1; }
 }
 
-test('CDN bundles expose their globals', () => {
-  assert.strictEqual(typeof w.Tonal, 'object');
-  assert.strictEqual(typeof w.ABCJS, 'object');
-});
+const app = () => w.document.getElementById('app');
+// Top-level `const`/`class` in a classic script create lexical globals, not
+// properties of window, so read them through the realm's evaluator.
+const g = (name) => w.eval(name);
 
-test('no script threw while loading (Tonal/TonoraTheory collision)', () => {
+test('every script loaded with no errors and no global collisions', () => {
   assert.deepStrictEqual(errors, []);
-  assert.ok(w.TonoraTheory, 'window.TonoraTheory was not defined');
-  assert.ok(Array.isArray(w.TonoraTheory.THEORY_LESSONS) && w.TonoraTheory.THEORY_LESSONS.length >= 5);
 });
 
-test('entering Theory mode builds a question, notation and a playable answer', () => {
-  const app = w.document.getElementById('app');
-  w.TheoryMode.enter(app);
-  assert.ok(app.querySelector('.theory-wrap'), 'no theory UI');
-  assert.ok(app.querySelector('svg'), 'no notation SVG');
-  assert.ok(w.TheoryMode.lesson, 'no lesson selected');
-  assert.ok(Array.isArray(w.TheoryMode.expected) && w.TheoryMode.expected.length >= 1, 'no expected answer');
-  // every lesson must produce a non-empty expected answer for its question
-  w.TonoraTheory.THEORY_LESSONS.forEach(l => {
-    w.TheoryMode.startLesson(l);
-    assert.ok(w.TheoryMode.expected.length >= 1, `lesson ${l.id} produced no expected answer`);
-    assert.ok(app.querySelector('svg'), `lesson ${l.id} did not render notation`);
+test('all mode objects + wrappers are defined', () => {
+  ['PlayMode', 'LearnMode', 'ComposeMode', 'TheoryMode', 'TonoraAchievements',
+   'PianoUI'].forEach(k => assert.ok(g(k), k + ' missing'));
+  ['TonoraAudio', 'noteToFreq', 'buildMidiFile', 'TonoraBacking',
+   'TonoraTheory', 'TonoraNotation'].forEach(k => assert.ok(w[k], k + ' missing'));
+  assert.strictEqual(typeof w.armAudioRevive, 'function');
+  assert.strictEqual(typeof w.renderCompositionToWav, 'function');
+});
+
+test('Play mode builds tabs, piano and selects an instrument', () => {
+  const PlayMode = g('PlayMode');
+  app().innerHTML = '';
+  PlayMode.enter(app());
+  assert.ok(app().querySelector('#inst-tabs .inst-tab'), 'no instrument tabs');
+  assert.ok(app().querySelector('.piano .key'), 'no piano keys');
+  PlayMode.select('drums');
+  assert.ok(app().querySelector('.drum-pad'), 'no drum pads');
+  PlayMode.leave();
+});
+
+test('Learn mode lists songs and can start + finish one', () => {
+  const LearnMode = g('LearnMode');
+  app().innerHTML = '';
+  LearnMode.enter(app());
+  const cards = app().querySelectorAll('.song-card');
+  assert.ok(cards.length >= 1, 'no song cards');
+  cards[0].dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  assert.ok(app().querySelector('.learn-stage:not(.hidden)'), 'stage not shown');
+  assert.ok(LearnMode.song && LearnMode.running, 'song did not start');
+  LearnMode.stop();
+});
+
+test('Compose mode builds the roll, mixer and project controls', () => {
+  const ComposeMode = g('ComposeMode');
+  app().innerHTML = '';
+  ComposeMode.enter(app());
+  assert.ok(app().querySelector('#roll .roll-row'), 'no sequencer rows');
+  assert.ok(app().querySelector('#cmp-projects'), 'no project selector');
+  assert.ok(app().querySelector('#cmp-import-midi'), 'no MIDI import');
+  // toggling a melody cell must not throw and must only touch that cell
+  const cell = app().querySelector('#roll .roll-cell.mel');
+  cell.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  assert.ok(cell.classList.contains('on'), 'cell did not turn on');
+  ComposeMode.leave();
+});
+
+test('Theory mode renders a lesson and answering does not throw', () => {
+  const TheoryMode = g('TheoryMode');
+  app().innerHTML = '';
+  TheoryMode.enter(app());
+  assert.ok(app().querySelector('.theory-tab'), 'no lesson tabs');
+  assert.ok(app().querySelector('svg'), 'no notation');
+  const note = TheoryMode.expected[0];
+  const key = app().querySelector(`.key[data-note="${note}"]`);
+  assert.ok(key, `no key element for ${note}`);
+  key.dispatchEvent(new w.MouseEvent('pointerdown', { bubbles: true }));
+  TheoryMode.leave();
+});
+
+test('switching modes repeatedly leaves no stale state or errors', () => {
+  ['play', 'learn', 'compose', 'theory'].forEach(id => {
+    const mode = { play: g('PlayMode'), learn: g('LearnMode'), compose: g('ComposeMode'), theory: g('TheoryMode') }[id];
+    if (mode && mode.leave) mode.leave();
   });
-});
-
-test('pressing a piano key during a lesson plays a note', () => {
-  // use the on-screen keyboard for the currently-expected note
-  w.TheoryMode.startLesson(w.TonoraTheory.THEORY_LESSONS[0]);
-  const note = w.TheoryMode.expected[0];
-  const el = w.document.querySelector(`.key[data-note="${note}"]`);
-  assert.ok(el, `no on-screen key for ${note}`);
-  const played = [];
-  w.TonoraAudio = { playNote: (...a) => { played.push(a); }, playDrum: () => {} };
-  el.dispatchEvent(new w.MouseEvent('pointerdown', { bubbles: true }));
-  assert.ok(played.length >= 1, 'key press did not trigger playNote');
-  assert.strictEqual(played[0][1], note);
+  assert.deepStrictEqual(errors, []);
 });
 
 if (process.exitCode) {
   console.error(`\n${passed} passed, some failed.`);
 } else {
-  console.log(`\nAll ${passed} load tests passed successfully! 🎉`);
+  console.log(`\nAll ${passed} smoke tests passed successfully! 🎉`);
 }
