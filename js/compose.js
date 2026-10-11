@@ -35,6 +35,8 @@ const ComposeMode = {
           <option value="lofi">Lofi Chill</option>
         </select>
         <button class="btn toggle" id="cmp-swing" title="Swing Rhythm">🎵 Swing</button>
+        <button class="btn toggle" id="cmp-countin" title="Count-in before recording">🥁 ${t('countIn')}</button>
+        <button class="btn toggle" id="cmp-metro" title="Metronome while playing">🎚️ ${t('metro')}</button>
         <button class="btn" id="cmp-mixer-btn">🎚️ Mixer</button>
         <button class="btn toggle" id="mute-mel" title="Mute melody">🎹 ${t('melody')}</button>
         <button class="btn toggle" id="mute-drm" title="Mute drums">🥁 ${t('drums')}</button>
@@ -74,6 +76,18 @@ const ComposeMode = {
       this.swing = !this.swing;
       swingBtn.classList.toggle('active', this.swing);
     };
+    const countinBtn = root.querySelector('#cmp-countin');
+    if (this.countIn) countinBtn.classList.add('active');
+    countinBtn.onclick = () => {
+      this.countIn = !this.countIn;
+      countinBtn.classList.toggle('active', this.countIn);
+    };
+    const metroBtn = root.querySelector('#cmp-metro');
+    if (this.metronome) metroBtn.classList.add('active');
+    metroBtn.onclick = () => {
+      this.metronome = !this.metronome;
+      metroBtn.classList.toggle('active', this.metronome);
+    };
     root.querySelector('#cmp-presets').onchange = e => {
       if (e.target.value) { this.loadPreset(e.target.value); e.target.value = ''; }
     };
@@ -83,6 +97,7 @@ const ComposeMode = {
         this.muted[key] = !this.muted[key];
         b.classList.toggle('active', !this.muted[key]);
         b.style.opacity = this.muted[key] ? '0.45' : '1';
+        this._reschedule();
       };
       b.classList.add('active');
     };
@@ -127,6 +142,7 @@ const ComposeMode = {
         soloBtn.onclick = () => {
           this.solo[id] = !this.solo[id];
           soloBtn.classList.toggle('active', this.solo[id]);
+          this._reschedule();
         };
         mixerPanel.appendChild(el);
       };
@@ -369,27 +385,74 @@ const ComposeMode = {
   start() {
     window.TonoraAudio.ensure();
     this.playing = true;
-    this.step = 0;
+    this._swingMult = 1;
     const playBtn = document.getElementById('cmp-play');
     if (playBtn) { playBtn.classList.add('primary'); playBtn.textContent = '⏸'; }
+    if (this.countIn) this._countIn(() => this._beginAt(0));
+    else this._beginAt(0);
+  },
+
+  /* four-beat count-in, then hand off to the sequencer loop */
+  _countIn(done) {
+    const clickDur = this.stepDur() * 4; // one beat
+    let n = 0;
+    const count = () => {
+      if (!this.playing) return;
+      if (n >= 4) { done(); return; }
+      this.click(n === 0);
+      n++;
+      this.timer = setTimeout(count, clickDur * 1000);
+    };
+    count();
+  },
+
+  /* run the step loop starting at fromStep */
+  _beginAt(fromStep) {
+    if (!this.playing) return;
+    this.step = fromStep;
     // cache row elements once — no per-tick DOM queries, no O(rows²) clearing
     const rows = [...document.querySelectorAll('.roll-row')];
     let prevCells = [];
     const tick = () => {
       if (!this.playing) return;
-      this.playStep(this.step);
       const s = this.step;
+      this.playStep(s);
+      if (this.metronome) this.click(s % 4 === 0);
       prevCells.forEach(c => c.classList.remove('cur'));
       prevCells = rows.map(row => row.children[1 + s]).filter(Boolean);
       prevCells.forEach(c => c.classList.add('cur'));
-      
+
       let dur = this.stepDur();
       if (this.swing) dur *= (s % 2 === 0) ? 1.33 : 0.67;
-      
+      dur *= (this._swingMult || 1);
+      this._swingMult = 1;
+
       this.step = (this.step + 1) % this.steps;
       this.timer = setTimeout(tick, dur * 1000);
     };
+    this._tick = tick;
     tick();
+  },
+
+  /* re-anchor the loop at the current step without losing position */
+  _reschedule() {
+    if (!this.playing) return;
+    clearTimeout(this.timer);
+    this._swingMult = 1;
+    this._beginAt(this.step);
+  },
+
+  /* short synthesized metronome tick */
+  click(accent) {
+    const ctx = window.TonoraAudio.ensure();
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    o.frequency.value = accent ? 1600 : 1000;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.2, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t); o.stop(t + 0.06);
   },
 
   playStep(s) {

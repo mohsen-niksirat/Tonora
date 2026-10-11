@@ -29,6 +29,7 @@ const I18N = {
     sustain: 'Sustain', skipListen: 'Skip to Play', accuracy: 'Accuracy',
     maxCombo: 'Max Combo', songsList: 'Song List', presets: 'Presets',
     mute: 'Mute', lessonComplete: 'Lesson Complete!', solo: 'Solo',
+    countIn: 'Count-in', metro: 'Metro',
     record: 'Record', stopRec: 'Stop & Save', shortcuts: 'Keyboard Shortcuts',
     recSaved: 'Recording saved!'
   },
@@ -59,6 +60,7 @@ const I18N = {
     sustain: 'ساستین', skipListen: 'پرش به نواختن', accuracy: 'دقت',
     maxCombo: 'بیشترین کمبو', songsList: 'لیست آهنگ‌ها', presets: 'الگوها',
     mute: 'بی‌صدا', lessonComplete: 'درس به پایان رسید!', solo: 'تکی',
+    countIn: 'شمارش شروع', metro: 'مترونوم',
     record: 'ضبط زنده', stopRec: 'توقف و ذخیره', shortcuts: 'کلیدهای میانبر',
     recSaved: 'فایل صوتی ذخیره شد!'
   }
