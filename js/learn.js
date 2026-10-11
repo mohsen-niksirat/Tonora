@@ -21,6 +21,7 @@ const LearnMode = {
         <div class="learn-hud">
           <button class="btn" id="learn-back">← ${t('back')}</button>
           <button class="btn toggle" id="learn-metro">🥁 ${t('metronome')}</button>
+          <button class="btn toggle" id="learn-backing">🎵 ${t('backing')}</button>
           <button class="btn toggle" id="learn-speed">1×</button>
           <button class="btn toggle" id="learn-ab">🔁 ${t('next8')}</button>
           <button class="btn primary" id="learn-skip">⚡ ${t('skipListen')}</button>
@@ -48,6 +49,10 @@ const LearnMode = {
     root.querySelector('#learn-metro').onclick = (e) => {
       this.metronome = !this.metronome;
       e.currentTarget.classList.toggle('active', this.metronome);
+    };
+    root.querySelector('#learn-backing').onclick = (e) => {
+      this.backing = !this.backing;
+      e.currentTarget.classList.toggle('active', this.backing);
     };
     root.querySelector('#learn-speed').onclick = (e) => {
       this.speed = this.speed === 1 ? 0.5 : 1;
@@ -111,6 +116,8 @@ const LearnMode = {
 
     this.maxCombo = 0;
     this.totalHits = 0;
+    this.backingData = window.TonoraBacking ? window.TonoraBacking.buildBacking(song) : null;
+    if (this.backingData) this.setStatus(`${t('listen')} · ${this.backingData.keyName} major`);
     const skipBtn = document.getElementById('learn-skip');
     if (skipBtn) {
       skipBtn.classList.remove('hidden');
@@ -146,6 +153,7 @@ const LearnMode = {
     });
 
     // Metronome clicks during listen phase
+    if (this.backing) this.scheduleBacking(t0, spb);
     const totalBeats = Math.ceil((song.notes[song.notes.length - 1].t + song.notes[song.notes.length - 1].d) / 1) + 2;
     for (let b = 0; b < totalBeats; b++) {
       const delayMs = (0.5 + b * spb) * 1000;
@@ -156,6 +164,30 @@ const LearnMode = {
     }
     const listenDur = (song.notes[song.notes.length - 1].t + song.notes[song.notes.length - 1].d) * spb * 1000 + 800;
     this._listenTimer = setTimeout(() => { if (this.running) this.beginPlay(spb); }, listenDur);
+  },
+
+  /* Auto-accompaniment: root bass + diatonic triad pad per bar. */
+  scheduleBacking(ctxStart, spb) {
+    const data = this.backingData;
+    if (!data || !data.bars.length || !window.TonoraBacking) return;
+    const ctx = window.TonoraAudio.ensure();
+    const bassInst = window.TONORA_INSTRUMENTS.find(i => i.id === 'synth');
+    const padInst = window.TONORA_INSTRUMENTS.find(i => i.id === 'organ');
+    data.bars.forEach(bar => {
+      const b0 = ctxStart + bar.startBeat * spb;
+      [0, 2].forEach(off => {
+        const v = window.TonoraAudio.scheduleNote(ctx, window.TonoraAudio.master, window.TonoraAudio.reverb,
+          bassInst, window.TonoraBacking.pcToNote(bar.rootPc, 2), spb * 1.4, 0.4,
+          b0 + off * spb, { vol: 0.4 }, window.TonoraAudio.delay);
+        if (v) this._scheduledVoices.push(v);
+      });
+      bar.triad.forEach(pc => {
+        const v = window.TonoraAudio.scheduleNote(ctx, window.TonoraAudio.master, window.TonoraAudio.reverb,
+          padInst, window.TonoraBacking.pcToNote(pc, 3), spb * 3.6, 0.2,
+          b0, { vol: 0.22 }, window.TonoraAudio.delay);
+        if (v) this._scheduledVoices.push(v);
+      });
+    });
   },
 
   /* short synthesized metronome tick */
@@ -181,6 +213,10 @@ const LearnMode = {
     this.setStatus(t('yourTurn'));
     this.hitIdx = new Set();
     this._lastBeat = -1;
+    if (this.backing) {
+      const ctx = window.TonoraAudio.ensure();
+      this.scheduleBacking(ctx.currentTime + 2.5, spb);
+    }
     this.loop();
   },
 
@@ -350,6 +386,14 @@ const LearnMode = {
       c.fill();
       c.strokeStyle = 'rgba(255,255,255,0.5)';
       c.strokeRect(x, y - h, w, h);
+      // note-name hint (pitch letter) inside the block
+      if (h > 16 * dpr && w > 14 * dpr) {
+        c.fillStyle = 'rgba(12,16,32,0.85)';
+        c.font = `bold ${Math.min(h * 0.62, 18 * dpr)}px system-ui, sans-serif`;
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText(n.n.replace(/-?\d+$/, ''), x + w / 2, y - h / 2);
+      }
     });
 
     // Draw and update particles

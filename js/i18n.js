@@ -13,7 +13,7 @@ const I18N = {
     home: 'Home', wait: 'Get ready…', tapStart: 'Tap to start', loading: 'Loading…',
     audioPaused: 'Audio is paused by the browser — click anywhere to start it',
     // v2
-    metronome: 'Metronome', speed: 'Speed', repeatAB: 'A–B repeat', next8: 'Repeat next 8',
+    metronome: 'Metronome', speed: 'Speed', repeatAB: 'A–B repeat', next8: 'Repeat next 8', backing: 'Backing',
     repeatOn: 'Loop on', repeatOff: 'Loop off',
     velocity: 'Velocity', exportWav: 'Export WAV', rendering: 'Rendering…', exportMidi: 'Export MIDI',
     midi: 'MIDI', noMidi: 'No MIDI device', midiDevices: 'MIDI device',
@@ -44,7 +44,7 @@ const I18N = {
     home: 'خانه', wait: 'آماده شو…', tapStart: 'برای شروع بزن', loading: 'در حال بارگذاری…',
     audioPaused: 'صدا توسط مرورگر متوقف شده — برای شروع جایی کلیک کن',
     // v2
-    metronome: 'مترونوم', speed: 'سرعت', repeatAB: 'تکرار A–B', next8: 'تکرار ۸ نت بعدی',
+    metronome: 'مترونوم', speed: 'سرعت', repeatAB: 'تکرار A–B', next8: 'تکرار ۸ نت بعدی', backing: 'همراهی',
     repeatOn: 'حلقه روشن', repeatOff: 'حلقه خاموش',
     velocity: 'شدت صدا', exportWav: 'خروجی WAV', rendering: 'در حال رندر…', exportMidi: 'خروجی MIDI',
     midi: 'میدی', noMidi: 'دستگاه میدی نیست', midiDevices: 'دستگاه میدی',

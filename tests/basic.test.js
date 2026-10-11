@@ -3,6 +3,7 @@ const assert = require('assert');
 // Load the REAL audio engine logic (pure helpers) instead of re-implementing it.
 const { noteToFreq, NOTE_OFFSET, audioBufferToWav } = require('../js/audio.js');
 const { noteNameToMidi, vlq, buildMidiFile } = require('../js/midi.js');
+const { buildBacking, pcToNote, inferKeyRoot, pcOf } = require('../js/backing.js');
 
 let passed = 0;
 function test(name, fn) {
@@ -75,6 +76,36 @@ test('buildMidiFile emits valid MThd/MTrk chunks', () => {
   assert.ok(bytes instanceof Uint8Array);
   assert.strictEqual(String.fromCharCode(...bytes.slice(0, 4)), 'MThd');
   assert.strictEqual(String.fromCharCode(...bytes.slice(14, 18)), 'MTrk');
+});
+
+test('pcOf parses naturals and accidentals', () => {
+  assert.strictEqual(pcOf('C4'), 0);
+  assert.strictEqual(pcOf('F#3'), 6);
+  assert.strictEqual(pcOf('Bb2'), 10);
+});
+
+test('inferKeyRoot detects C major from a C-major melody', () => {
+  const melody = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
+  assert.strictEqual(inferKeyRoot(melody.map(pcOf)), 0);
+});
+
+test('buildBacking yields one bar per measure with a valid triad', () => {
+  const song = {
+    notes: [
+      { n: 'C4', t: 0, d: 1 }, { n: 'E4', t: 1, d: 1 }, { n: 'G4', t: 2, d: 1 }, { n: 'C5', t: 3, d: 1 },
+      { n: 'F4', t: 4, d: 1 }, { n: 'A4', t: 5, d: 1 }, { n: 'C5', t: 6, d: 1 }, { n: 'F4', t: 7, d: 1 }
+    ]
+  };
+  const { key, bars } = buildBacking(song);
+  assert.strictEqual(key, 0);
+  assert.strictEqual(bars.length, 2);
+  assert.ok(bars.every(b => b.triad.length === 3 && b.startBeat % 4 === 0));
+});
+
+test('pcToNote wraps octaves correctly', () => {
+  assert.strictEqual(pcToNote(0, 3), 'C3');
+  assert.strictEqual(pcToNote(11, 2), 'B2');
+  assert.strictEqual(pcToNote(12, 4), 'C4');
 });
 
 if (process.exitCode) {
