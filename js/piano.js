@@ -48,6 +48,8 @@ class PianoUI {
       const k = document.createElement('div');
       k.className = 'key white';
       k.dataset.note = note;
+      k.setAttribute('role', 'button');
+      k.setAttribute('aria-label', note);
       const keyHint = NOTE_TO_KEY[note] ? `<small class="pc-hint">${NOTE_TO_KEY[note]}</small>` : '';
       k.innerHTML = `<span class="key-label">${note}${keyHint}</span>`;
       this.container.appendChild(k);
@@ -59,6 +61,8 @@ class PianoUI {
         const bk = document.createElement('div');
         bk.className = 'key black';
         bk.dataset.note = bn;
+        bk.setAttribute('role', 'button');
+        bk.setAttribute('aria-label', bn);
         const bHint = NOTE_TO_KEY[bn] ? `<small class="pc-hint">${NOTE_TO_KEY[bn]}</small>` : '';
         bk.innerHTML = `<span class="key-label">${bn}${bHint}</span>`;
         // Position at the boundary between this white key and the next
