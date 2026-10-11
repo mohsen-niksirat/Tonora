@@ -28,7 +28,7 @@ const I18N = {
     playAgain: 'Play Again', nextSong: 'Next Song', octave: 'Octave',
     sustain: 'Sustain', skipListen: 'Skip to Play', accuracy: 'Accuracy',
     maxCombo: 'Max Combo', songsList: 'Song List', presets: 'Presets',
-    mute: 'Mute', lessonComplete: 'Lesson Complete!',
+    mute: 'Mute', lessonComplete: 'Lesson Complete!', solo: 'Solo',
     record: 'Record', stopRec: 'Stop & Save', shortcuts: 'Keyboard Shortcuts',
     recSaved: 'Recording saved!'
   },
@@ -58,7 +58,7 @@ const I18N = {
     playAgain: 'تکرار درس', nextSong: 'آهنگ بعدی', octave: 'اکتاو',
     sustain: 'ساستین', skipListen: 'پرش به نواختن', accuracy: 'دقت',
     maxCombo: 'بیشترین کمبو', songsList: 'لیست آهنگ‌ها', presets: 'الگوها',
-    mute: 'بی‌صدا', lessonComplete: 'درس به پایان رسید!',
+    mute: 'بی‌صدا', lessonComplete: 'درس به پایان رسید!', solo: 'تکی',
     record: 'ضبط زنده', stopRec: 'توقف و ذخیره', shortcuts: 'کلیدهای میانبر',
     recSaved: 'فایل صوتی ذخیره شد!'
   }

@@ -14,6 +14,7 @@ const ComposeMode = {
   enter(root) {
     this.tracks = { melody: new Array(this.steps).fill(null), drums: new Array(this.steps).fill(false), bass: new Array(this.steps).fill(null) };
     this.muted = { melody: false, drums: false, bass: false };
+    this.solo = { melody: false, drums: false, bass: false };
     this.loadSaved();
     root.innerHTML = `
       <div class="compose-hud">
@@ -117,9 +118,16 @@ const ComposeMode = {
           <strong>${icon} ${name}</strong>
           <label style="font-size:0.75rem; color:var(--muted)">Vol: <input type="range" class="${id}-vol" min="0" max="2" step="0.1" value="${mix.vol}" style="width:50px"></label>
           <label style="font-size:0.75rem; color:var(--muted)">Pan: <input type="range" class="${id}-pan" min="-1" max="1" step="0.1" value="${mix.pan}" style="width:50px"></label>
+          <button class="btn toggle ${id}-solo" style="font-size:0.7rem; padding:0.25rem 0.5rem">🎯 ${t('solo')}</button>
         `;
         el.querySelector(`.${id}-vol`).oninput = e => { this.tracks.mixer[id].vol = +e.target.value; };
         el.querySelector(`.${id}-pan`).oninput = e => { this.tracks.mixer[id].pan = +e.target.value; };
+        const soloBtn = el.querySelector(`.${id}-solo`);
+        soloBtn.classList.toggle('active', this.solo[id]);
+        soloBtn.onclick = () => {
+          this.solo[id] = !this.solo[id];
+          soloBtn.classList.toggle('active', this.solo[id]);
+        };
         mixerPanel.appendChild(el);
       };
       if (!this.tracks.mixer) this.tracks.mixer = { melody: {vol:1,pan:0}, bass: {vol:1,pan:0}, drums: {vol:1,pan:0} };
@@ -387,17 +395,19 @@ const ComposeMode = {
   playStep(s) {
     const vel = this.velocity;
     const mix = this.tracks.mixer || { melody: {vol:1,pan:0}, bass: {vol:1,pan:0}, drums: {vol:1,pan:0} };
-    if (!this.muted || !this.muted.melody) {
+    const soloed = this.solo && Object.values(this.solo).some(Boolean);
+    const audible = (track) => soloed ? !!this.solo[track] : !(this.muted && this.muted[track]);
+    if (audible('melody')) {
       const m = this.tracks.melody[s];
       if (m) (Array.isArray(m) ? m : [m]).forEach(n =>
         window.TonoraAudio.playNote(this.inst('piano'), n, this.stepDur() * 2, vel, 0, mix.melody));
     }
-    if (!this.muted || !this.muted.bass) {
+    if (audible('bass')) {
       const b = this.tracks.bass[s];
       if (b) (Array.isArray(b) ? b : [b]).forEach(n =>
         window.TonoraAudio.playNote(this.inst('synth'), n, this.stepDur() * 3, vel, 0, mix.bass));
     }
-    if (!this.muted || !this.muted.drums) {
+    if (audible('drums')) {
       const d = this.inst('drums');
       // back-compat
       if (this.tracks.drums[s] === true) {
