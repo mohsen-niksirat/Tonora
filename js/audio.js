@@ -406,7 +406,7 @@ class AudioEngine {
         const o = ctx.createOscillator(); o.frequency.value = 180;
         const og = ctx.createGain(); og.gain.setValueAtTime(vel * 0.4, t);
         og.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-        o.connect(og); og.connect(master); o.start(t); o.stop(t + 0.12);
+        o.connect(og); og.connect(g); o.start(t); o.stop(t + 0.12);
         break;
       }
       case 'hat': {
