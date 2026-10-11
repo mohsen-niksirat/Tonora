@@ -30,6 +30,8 @@ class AudioEngine {
     this.master = null;
     this.reverb = null;
     this._reviving = false;
+    this.buses = {};
+    this._voices = [];
   }
 
   ensure() {
@@ -120,6 +122,70 @@ class AudioEngine {
     return this._visData;
   }
 
+  /* ---- Persistent per-track buses -------------------------------------
+     A bus owns a gain (volume) + panner (pan) + analyser (meter) and fans
+     out to master, reverb and delay. Voices routed to a bus inherit its
+     mixer settings, so moving a fader affects already-scheduled notes too
+     and we get a free per-track level meter. */
+  getBus(name) {
+    const ctx = this.ensure();
+    if (!this.buses[name]) {
+      const gain = ctx.createGain();
+      let out = gain;
+      let panner = null;
+      if (ctx.createStereoPanner) {
+        panner = ctx.createStereoPanner();
+        gain.connect(panner);
+        out = panner;
+      }
+      out.connect(this.master);
+      out.connect(this.reverb);
+      out.connect(this.delay);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 128;
+      out.connect(analyser);
+      this.buses[name] = { gain, panner, analyser, _data: null };
+    }
+    return this.buses[name];
+  }
+
+  setBusGain(name, val) {
+    const b = this.getBus(name);
+    b.gain.gain.setTargetAtTime(Math.max(0, Math.min(2, val)), this.ctx.currentTime, 0.03);
+  }
+
+  setBusPan(name, val) {
+    const b = this.getBus(name);
+    if (b.panner) b.panner.pan.setTargetAtTime(Math.max(-1, Math.min(1, val)), this.ctx.currentTime, 0.03);
+  }
+
+  /* Peak level (0..1) of a bus, for the mixer meters. */
+  getBusLevel(name) {
+    const b = this.buses[name];
+    if (!b) return 0;
+    if (!b._data) b._data = new Uint8Array(b.analyser.frequencyBinCount);
+    b.analyser.getByteTimeDomainData(b._data);
+    let peak = 0;
+    for (let i = 0; i < b._data.length; i++) {
+      const d = Math.abs(b._data[i] - 128) / 128;
+      if (d > peak) peak = d;
+    }
+    return peak;
+  }
+
+  /* Polyphony guard: cap concurrent voices so fast arps / dense chords can
+     never build up an unbounded node graph. Oldest voices are stolen. */
+  _registerVoice(voice, durSec) {
+    if (!this.ctx) return;
+    const t = performance.now();
+    this._voices = this._voices.filter(v => v.exp > t);
+    if (this._voices.length >= 64) {
+      const old = this._voices.shift();
+      try { if (old.voice && old.voice.stop) old.voice.stop(); } catch (e) {}
+    }
+    this._voices.push({ voice, exp: t + (Math.max(0.2, durSec) + 0.6) * 1000 });
+  }
+
   startLiveRecording() {
     this.ensure();
     if (typeof MediaRecorder === 'undefined') return false;
@@ -182,7 +248,17 @@ class AudioEngine {
     const ctx = this.ensure();
     this.guard();
     const t = when > 0 ? when : ctx.currentTime;
-    return this.scheduleNote(ctx, this.master, this.reverb, instDef, note, dur, vel, t, opts, this.delay);
+    let voice;
+    if (opts.bus) {
+      const bus = this.getBus(opts.bus);
+      const o = Object.assign({}, opts);
+      delete o.pan; // the bus owns panning
+      voice = this.scheduleNote(ctx, bus.gain, null, instDef, note, dur, vel, t, o, null);
+    } else {
+      voice = this.scheduleNote(ctx, this.master, this.reverb, instDef, note, dur, vel, t, opts, this.delay);
+    }
+    this._registerVoice(voice, dur > 0 ? dur : 1.8);
+    return voice;
   }
 
   /* Core synthesis — works on any BaseAudioContext (live or offline) */
@@ -360,7 +436,17 @@ class AudioEngine {
     const ctx = this.ensure();
     this.guard();
     const t = when > 0 ? when : ctx.currentTime;
-    return this.scheduleDrum(ctx, this.master, this.reverb, instDef, padId, vel, t, opts, this.delay);
+    let voice;
+    if (opts.bus) {
+      const bus = this.getBus(opts.bus);
+      const o = Object.assign({}, opts);
+      delete o.pan;
+      voice = this.scheduleDrum(ctx, bus.gain, null, instDef, padId, vel, t, o, null);
+    } else {
+      voice = this.scheduleDrum(ctx, this.master, this.reverb, instDef, padId, vel, t, opts, this.delay);
+    }
+    this._registerVoice(voice, 1.0);
+    return voice;
   }
 
   scheduleDrum(ctx, master, reverb, instDef, padId, vel, when, opts = {}, delayNode = null) {
@@ -551,7 +637,28 @@ async function renderCompositionToWav(tracks, bpm, steps, swing) {
   const eng = window.TonoraAudio;
   const inst = id => window.TONORA_INSTRUMENTS.find(i => i.id === id);
   const vel = (tracks.velocity !== undefined) ? tracks.velocity : 0.8;
-  
+
+  // offline buses mirroring the live mixer (gain + pan), so the render
+  // reflects the same volume/pan settings the user hears in the app
+  const buses = {};
+  const mkBus = (id) => {
+    const mix = (tracks.mixer && tracks.mixer[id]) || { vol: 1, pan: 0 };
+    const gain = off.createGain();
+    gain.gain.value = mix.vol;
+    let out = gain;
+    if (off.createStereoPanner) {
+      const p = off.createStereoPanner();
+      p.pan.value = mix.pan || 0;
+      gain.connect(p);
+      out = p;
+    }
+    out.connect(master);
+    out.connect(reverb);
+    out.connect(delay);
+    buses[id] = gain;
+  };
+  mkBus('melody'); mkBus('bass'); mkBus('drums');
+
   let currentWhen = 0;
   for (let s = 0; s < steps; s++) {
     const when = currentWhen;
@@ -559,28 +666,24 @@ async function renderCompositionToWav(tracks, bpm, steps, swing) {
     if (swing) dur *= (s % 2 === 0) ? 1.33 : 0.67;
     currentWhen += dur;
 
-    const melOpts = tracks.mixer?.melody || { vol: 1, pan: 0 };
-    const bassOpts = tracks.mixer?.bass || { vol: 1, pan: 0 };
-    const drumOpts = tracks.mixer?.drums || { vol: 1, pan: 0 };
-
     const mel = tracks.melody[s];
     if (mel) {
       const notesArr = Array.isArray(mel) ? mel : [mel];
-      notesArr.forEach(n => eng.scheduleNote(off, master, reverb, inst('piano'), n, dur * 2, vel, when, melOpts, delay));
+      notesArr.forEach(n => eng.scheduleNote(off, buses.melody, null, inst('piano'), n, dur * 2, vel, when, {}, null));
     }
     const bass = tracks.bass[s];
     if (bass) {
       const notesArr = Array.isArray(bass) ? bass : [bass];
-      notesArr.forEach(n => eng.scheduleNote(off, master, reverb, inst('synth'), n, dur * 3, vel, when, bassOpts, delay));
+      notesArr.forEach(n => eng.scheduleNote(off, buses.bass, null, inst('synth'), n, dur * 3, vel, when, {}, null));
     }
-    
+
     // Check old style single drum array, or new style dict
     if (tracks.drums[s] === true) {
-      eng.scheduleDrum(off, master, reverb, inst('drums'), s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel, when, drumOpts, delay);
+      eng.scheduleDrum(off, buses.drums, null, inst('drums'), s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel, when, {}, null);
     } else if (typeof tracks.drums === 'object' && !Array.isArray(tracks.drums)) {
-      if (tracks.drums.kick && tracks.drums.kick[s]) eng.scheduleDrum(off, master, reverb, inst('drums'), 'kick', vel, when, drumOpts, delay);
-      if (tracks.drums.snare && tracks.drums.snare[s]) eng.scheduleDrum(off, master, reverb, inst('drums'), 'snare', vel, when, drumOpts, delay);
-      if (tracks.drums.hat && tracks.drums.hat[s]) eng.scheduleDrum(off, master, reverb, inst('drums'), 'hat', vel, when, drumOpts, delay);
+      if (tracks.drums.kick && tracks.drums.kick[s]) eng.scheduleDrum(off, buses.drums, null, inst('drums'), 'kick', vel, when, {}, null);
+      if (tracks.drums.snare && tracks.drums.snare[s]) eng.scheduleDrum(off, buses.drums, null, inst('drums'), 'snare', vel, when, {}, null);
+      if (tracks.drums.hat && tracks.drums.hat[s]) eng.scheduleDrum(off, buses.drums, null, inst('drums'), 'hat', vel, when, {}, null);
     }
   }
   const rendered = await off.startRendering();

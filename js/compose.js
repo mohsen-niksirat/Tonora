@@ -126,19 +126,30 @@ const ComposeMode = {
     };
     
     const buildMixerUI = () => {
+      if (!this.tracks.mixer) this.tracks.mixer = { melody: {vol:1,pan:0}, bass: {vol:1,pan:0}, drums: {vol:1,pan:0} };
       mixerPanel.innerHTML = '';
+      const meters = {};
       const mkStrip = (id, name, icon) => {
-        const mix = this.tracks.mixer[id] || { vol: 1, pan: 0 };
+        const mix = this.tracks.mixer[id] || (this.tracks.mixer[id] = { vol: 1, pan: 0 });
         const el = document.createElement('div');
-        el.style.display = 'flex'; el.style.flexDirection = 'column'; el.style.gap = '0.5rem'; el.style.alignItems = 'center';
+        el.style.cssText = 'display:flex; flex-direction:column; gap:0.5rem; align-items:center;';
         el.innerHTML = `
           <strong>${icon} ${name}</strong>
+          <div class="meter" style="width:60px; height:8px; background:rgba(255,255,255,0.12); border-radius:4px; overflow:hidden">
+            <div class="${id}-meter" style="height:100%; width:0%; background:linear-gradient(90deg,#2ecc71,#f1c40f,#e74c3c); transition:width 60ms linear"></div>
+          </div>
           <label style="font-size:0.75rem; color:var(--muted)">Vol: <input type="range" class="${id}-vol" min="0" max="2" step="0.1" value="${mix.vol}" style="width:50px"></label>
           <label style="font-size:0.75rem; color:var(--muted)">Pan: <input type="range" class="${id}-pan" min="-1" max="1" step="0.1" value="${mix.pan}" style="width:50px"></label>
           <button class="btn toggle ${id}-solo" style="font-size:0.7rem; padding:0.25rem 0.5rem">🎯 ${t('solo')}</button>
         `;
-        el.querySelector(`.${id}-vol`).oninput = e => { this.tracks.mixer[id].vol = +e.target.value; };
-        el.querySelector(`.${id}-pan`).oninput = e => { this.tracks.mixer[id].pan = +e.target.value; };
+        el.querySelector(`.${id}-vol`).oninput = e => {
+          this.tracks.mixer[id].vol = +e.target.value;
+          window.TonoraAudio.setBusGain(id, this.tracks.mixer[id].vol);
+        };
+        el.querySelector(`.${id}-pan`).oninput = e => {
+          this.tracks.mixer[id].pan = +e.target.value;
+          window.TonoraAudio.setBusPan(id, this.tracks.mixer[id].pan);
+        };
         const soloBtn = el.querySelector(`.${id}-solo`);
         soloBtn.classList.toggle('active', this.solo[id]);
         soloBtn.onclick = () => {
@@ -146,12 +157,25 @@ const ComposeMode = {
           soloBtn.classList.toggle('active', this.solo[id]);
           this._reschedule();
         };
+        meters[id] = el.querySelector(`.${id}-meter`);
+        // push saved mixer values onto the live buses
+        window.TonoraAudio.setBusGain(id, mix.vol);
+        window.TonoraAudio.setBusPan(id, mix.pan);
         mixerPanel.appendChild(el);
       };
-      if (!this.tracks.mixer) this.tracks.mixer = { melody: {vol:1,pan:0}, bass: {vol:1,pan:0}, drums: {vol:1,pan:0} };
       mkStrip('melody', t('melody'), '🎹');
       mkStrip('drums', t('drums'), '🥁');
       mkStrip('bass', t('bass'), '🌈');
+
+      // live level meters
+      cancelAnimationFrame(this._meterRaf);
+      const loopMeters = () => {
+        this._meterRaf = requestAnimationFrame(loopMeters);
+        for (const id in meters) {
+          if (meters[id]) meters[id].style.width = Math.round(window.TonoraAudio.getBusLevel(id) * 100) + '%';
+        }
+      };
+      loopMeters();
     };
     buildMixerUI();
     this.buildMixerUI = buildMixerUI;
@@ -459,28 +483,27 @@ const ComposeMode = {
 
   playStep(s) {
     const vel = this.velocity;
-    const mix = this.tracks.mixer || { melody: {vol:1,pan:0}, bass: {vol:1,pan:0}, drums: {vol:1,pan:0} };
     const soloed = this.solo && Object.values(this.solo).some(Boolean);
     const audible = (track) => soloed ? !!this.solo[track] : !(this.muted && this.muted[track]);
     if (audible('melody')) {
       const m = this.tracks.melody[s];
       if (m) (Array.isArray(m) ? m : [m]).forEach(n =>
-        window.TonoraAudio.playNote(this.inst('piano'), n, this.stepDur() * 2, vel, 0, mix.melody));
+        window.TonoraAudio.playNote(this.inst('piano'), n, this.stepDur() * 2, vel, 0, { bus: 'melody' }));
     }
     if (audible('bass')) {
       const b = this.tracks.bass[s];
       if (b) (Array.isArray(b) ? b : [b]).forEach(n =>
-        window.TonoraAudio.playNote(this.inst('synth'), n, this.stepDur() * 3, vel, 0, mix.bass));
+        window.TonoraAudio.playNote(this.inst('synth'), n, this.stepDur() * 3, vel, 0, { bus: 'bass' }));
     }
     if (audible('drums')) {
       const d = this.inst('drums');
       // back-compat
       if (this.tracks.drums[s] === true) {
-        window.TonoraAudio.playDrum(d, s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel, 0, mix.drums);
+        window.TonoraAudio.playDrum(d, s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel, 0, { bus: 'drums' });
       } else if (typeof this.tracks.drums === 'object' && !Array.isArray(this.tracks.drums)) {
-        if (this.tracks.drums.kick && this.tracks.drums.kick[s]) window.TonoraAudio.playDrum(d, 'kick', vel, 0, mix.drums);
-        if (this.tracks.drums.snare && this.tracks.drums.snare[s]) window.TonoraAudio.playDrum(d, 'snare', vel, 0, mix.drums);
-        if (this.tracks.drums.hat && this.tracks.drums.hat[s]) window.TonoraAudio.playDrum(d, 'hat', vel, 0, mix.drums);
+        if (this.tracks.drums.kick && this.tracks.drums.kick[s]) window.TonoraAudio.playDrum(d, 'kick', vel, 0, { bus: 'drums' });
+        if (this.tracks.drums.snare && this.tracks.drums.snare[s]) window.TonoraAudio.playDrum(d, 'snare', vel, 0, { bus: 'drums' });
+        if (this.tracks.drums.hat && this.tracks.drums.hat[s]) window.TonoraAudio.playDrum(d, 'hat', vel, 0, { bus: 'drums' });
       }
     }
   },
@@ -570,5 +593,5 @@ const ComposeMode = {
     r.readAsText(file);
   },
 
-  leave() { this.stop(); this.save(); }
+  leave() { this.stop(); cancelAnimationFrame(this._meterRaf); this.save(); }
 };
