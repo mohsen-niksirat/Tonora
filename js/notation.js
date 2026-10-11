@@ -81,6 +81,11 @@ const TonoraNotation = {
   play(container, visualObj, opts) {
     if (!this.available() || !visualObj) return null;
     const o = opts || {};
+    // abcjs only fills noteTimings[].midiPitches after setUpAudio(), which the
+    // synth normally triggers. We drive our own audio, so call it once here.
+    if (typeof visualObj.setUpAudio === 'function' && !visualObj._tonoraPrepared) {
+      try { visualObj.setUpAudio({}); visualObj._tonoraPrepared = true; } catch (e) { /* ignore */ }
+    }
     const svg = container ? container.querySelector('svg') : null;
     const inst = (window.TONORA_INSTRUMENTS || []).find(i => i.id === 'piano') || null;
 

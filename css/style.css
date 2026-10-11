@@ -290,7 +290,10 @@ html[dir="rtl"] .kb-table { text-align: right; }
 .theory-actions { display: flex; gap: .6rem; }
 .theory-piano { width: 100%; max-width: 860px; }
 .theory-piano .piano { margin-top: 0; }
-.abcjs-note.highlight path, .abcjs-note.highlight rect { fill: var(--accent) !important; }
-.abcjs-note.highlight { filter: drop-shadow(0 0 6px var(--accent)); }
+.theory-board .highlight path,
+.theory-board .highlight rect,
+.theory-board .highlight ellipse,
+.theory-board .highlight polygon { fill: var(--accent) !important; stroke: var(--accent) !important; }
+.theory-board .highlight { filter: drop-shadow(0 0 6px var(--accent)); }
 .tonora-cursor { stroke: var(--accent); stroke-width: 2; }
 

@@ -4,12 +4,13 @@
   "description": "Play, Learn, Compose music in browser.",
   "private": true,
   "scripts": {
-    "test": "node tests/basic.test.js && node tests/dom.test.js",
+    "test": "node tests/basic.test.js && node tests/dom.test.js && node tests/notation.test.js",
     "check": "node scripts/check-syntax.js",
     "lint": "eslint js tests scripts",
     "ci": "npm run check && npm run lint && npm test"
   },
   "devDependencies": {
+    "abcjs": "^6.7.1",
     "eslint": "^9.0.0",
     "jsdom": "^24.0.0",
     "tonal": "^6.4.0"
