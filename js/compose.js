@@ -10,6 +10,40 @@ const ComposeMode = {
   playing: false,
   timer: null,
   step: 0,
+  history: [],
+  redoStack: [],
+
+  /* ---- undo / redo ---- */
+  snapshot() {
+    this.history.push(JSON.stringify({ tracks: this.tracks, steps: this.steps, bpm: this.bpm, velocity: this.velocity }));
+    if (this.history.length > 60) this.history.shift();
+    this.redoStack.length = 0;
+  },
+  _state() {
+    return JSON.stringify({ tracks: this.tracks, steps: this.steps, bpm: this.bpm, velocity: this.velocity });
+  },
+  undo() {
+    if (!this.history.length) return;
+    this.redoStack.push(this._state());
+    this._restore(JSON.parse(this.history.pop()));
+  },
+  redo() {
+    if (!this.redoStack.length) return;
+    this.history.push(this._state());
+    this._restore(JSON.parse(this.redoStack.pop()));
+  },
+  _restore(s) {
+    this.tracks = s.tracks;
+    this.steps = s.steps;
+    this.bpm = s.bpm;
+    this.velocity = s.velocity;
+    const lenSel = document.getElementById('cmp-len'); if (lenSel) lenSel.value = this.steps;
+    const bpmIn = document.getElementById('cmp-bpm'); if (bpmIn) bpmIn.value = this.bpm;
+    const velIn = document.getElementById('cmp-vel'); if (velIn) velIn.value = this.velocity;
+    this.buildRoll();
+    if (this.buildMixerUI) this.buildMixerUI();
+    this.updateDuration();
+  },
 
   enter(root) {
     this.tracks = this.normalizeTracks({ melody: new Array(this.steps).fill(null), bass: new Array(this.steps).fill(null), drums: new Array(this.steps).fill(false), velocity: this.velocity });
@@ -20,6 +54,8 @@ const ComposeMode = {
       <div class="compose-hud">
         <button class="btn" id="cmp-play">▶</button>
         <button class="btn" id="cmp-stop">■</button>
+        <button class="btn" id="cmp-undo" title="Undo (Ctrl+Z)">↶</button>
+        <button class="btn" id="cmp-redo" title="Redo (Ctrl+Y)">↷</button>
         <label>${t('tempo')}: <input type="number" id="cmp-bpm" min="40" max="240" value="${this.bpm}" style="width:5em"></label>
         <label>${t('velocity')}: <input type="range" id="cmp-vel" min="0.4" max="1" step="0.05" value="${this.velocity}" style="width:7em"></label>
         <span class="cmp-dur" id="cmp-dur" title="${t('duration')}"></span>
@@ -60,6 +96,18 @@ const ComposeMode = {
     `;
     root.querySelector('#cmp-play').onclick = () => this.togglePlay();
     root.querySelector('#cmp-stop').onclick = () => this.stop();
+    root.querySelector('#cmp-undo').onclick = () => this.undo();
+    root.querySelector('#cmp-redo').onclick = () => this.redo();
+    if (this._onKey) document.removeEventListener('keydown', this._onKey);
+    this._onKey = (e) => {
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); this.undo(); }
+      else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); this.redo(); }
+    };
+    document.addEventListener('keydown', this._onKey);
     root.querySelector('#cmp-bpm').onchange = e => {
       this.bpm = Math.max(40, Math.min(240, +e.target.value || 120));
       e.target.value = this.bpm;
@@ -70,6 +118,7 @@ const ComposeMode = {
     lenSelect.onchange = e => {
       const newLen = parseInt(e.target.value);
       if (newLen !== this.steps) {
+        this.snapshot();
         this.steps = newLen;
         this.resizeTracks();
         this.buildRoll();
@@ -128,6 +177,7 @@ const ComposeMode = {
     };
     root.querySelector('#cmp-clear').onclick = () => {
       if (confirm(t('confirmClear'))) {
+        this.snapshot();
         this.tracks = this.normalizeTracks({ melody: [], bass: [], drums: { kick:[], snare:[], hat:[] }, velocity: this.velocity });
         this.buildRoll();
       }
@@ -231,6 +281,7 @@ const ComposeMode = {
   loadProject(name) {
     const d = this.projectList()[name];
     if (!d) return;
+    this.snapshot();
     this.steps = d.steps || 32;
     this.bpm = d.bpm || 120;
     this.tracks = this.normalizeTracks(d.tracks);
@@ -259,6 +310,7 @@ const ComposeMode = {
     r.onload = () => {
       try {
         const res = window.midiToTracks(new Uint8Array(r.result), this.steps);
+        this.snapshot();
         this.bpm = res.bpm || this.bpm;
         this.tracks = this.normalizeTracks(res.tracks);
         const bpmIn = document.getElementById('cmp-bpm');
@@ -345,6 +397,7 @@ const ComposeMode = {
     };
     const p = PRESETS[key];
     if (!p) return;
+    this.snapshot();
     this.bpm = p.bpm;
     this.velocity = p.velocity;
     this.tracks = this.normalizeTracks(p.tracks);
@@ -444,6 +497,7 @@ const ComposeMode = {
     const mkDrumRow = (key, icon, sound) => {
       const dcells = this.tracks.drums[key].map((v, s) =>
         mkCell('drm', v, (cell) => {
+          this.snapshot();
           this.tracks.drums[key][s] = !this.tracks.drums[key][s];
           cell.classList.toggle('on', this.tracks.drums[key][s]);
           if (this.tracks.drums[key][s]) window.TonoraAudio.playDrum(drumDefs, sound, 0.9);
@@ -467,6 +521,7 @@ const ComposeMode = {
   },
 
   toggleNote(track, s, n, instId, previewDur, cell) {
+    this.snapshot();
     const arr = this.tracks[track];
     if (Array.isArray(arr[s])) {
       const i = arr[s].indexOf(n);
@@ -664,6 +719,7 @@ const ComposeMode = {
       try {
         const d = JSON.parse(r.result);
         if (d.type === 'song' && d.tracks) {
+          this.snapshot();
           if (d.steps) {
             this.steps = d.steps;
             const lenSel = document.getElementById('cmp-len');
@@ -682,5 +738,10 @@ const ComposeMode = {
     r.readAsText(file);
   },
 
-  leave() { this.stop(); cancelAnimationFrame(this._meterRaf); this.save(); }
+  leave() {
+    this.stop();
+    cancelAnimationFrame(this._meterRaf);
+    if (this._onKey) { document.removeEventListener('keydown', this._onKey); this._onKey = null; }
+    this.save();
+  }
 };

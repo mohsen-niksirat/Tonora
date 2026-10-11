@@ -133,6 +133,24 @@ test('Compose mode builds the roll, mixer and project controls', () => {
   ComposeMode.leave();
 });
 
+test('Compose undo/redo restores note edits', () => {
+  const ComposeMode = g('ComposeMode');
+  app().innerHTML = '';
+  ComposeMode.enter(app());
+  const cellOf = () => app().querySelector('#roll .roll-cell.mel');
+  const cell = cellOf();
+  const wasOn = cell.classList.contains('on');
+  cell.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  assert.notStrictEqual(cellOf().classList.contains('on'), wasOn, 'cell did not toggle');
+  ComposeMode.undo();
+  assert.strictEqual(cellOf().classList.contains('on'), wasOn, 'undo did not restore previous state');
+  ComposeMode.redo();
+  assert.notStrictEqual(cellOf().classList.contains('on'), wasOn, 'redo did not re-apply edit');
+  ComposeMode.undo();
+  ComposeMode.leave();
+  assert.deepStrictEqual(errors, []);
+});
+
 test('Theory mode renders a lesson and answering does not throw', () => {
   const TheoryMode = g('TheoryMode');
   app().innerHTML = '';
