@@ -68,13 +68,13 @@ const PlayMode = {
           this.arpTimer = null;
         } else if (this.arpActive) {
           this.arpTimer = setInterval(() => {
-            if (!this.piano || this.piano.activeKeys.size === 0) return;
-            const keys = Array.from(this.piano.activeKeys).sort((a,b) => noteToFreq(a) - noteToFreq(b));
+            if (!this.piano || this.piano.active.size === 0) return;
+            const keys = Array.from(this.piano.active).sort((a,b) => noteToFreq(a) - noteToFreq(b));
             if (keys.length === 0) return;
             this.arpIndex = (this.arpIndex + 1) % keys.length;
             const note = keys[this.arpIndex];
             const def = this.inst(this.current);
-            window.TonoraAudio.playNote(def, note, 0.15, 0.8, 0, {}, window.TonoraAudio.delay);
+            window.TonoraAudio.playNote(def, note, 0.15, 0.8);
           }, 150); // ~100bpm 16th notes
         }
       };
