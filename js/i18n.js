@@ -15,7 +15,7 @@ const I18N = {
     // v2
     metronome: 'Metronome', speed: 'Speed', repeatAB: 'A–B repeat', next8: 'Repeat next 8',
     repeatOn: 'Loop on', repeatOff: 'Loop off',
-    velocity: 'Velocity', exportWav: 'Export WAV', rendering: 'Rendering…',
+    velocity: 'Velocity', exportWav: 'Export WAV', rendering: 'Rendering…', exportMidi: 'Export MIDI',
     midi: 'MIDI', noMidi: 'No MIDI device', midiDevices: 'MIDI device',
     achievements: 'Achievements',
     ach_first_song: 'First Song Learned', ach_first_song_d: 'Finish a lesson',
@@ -46,7 +46,7 @@ const I18N = {
     // v2
     metronome: 'مترونوم', speed: 'سرعت', repeatAB: 'تکرار A–B', next8: 'تکرار ۸ نت بعدی',
     repeatOn: 'حلقه روشن', repeatOff: 'حلقه خاموش',
-    velocity: 'شدت صدا', exportWav: 'خروجی WAV', rendering: 'در حال رندر…',
+    velocity: 'شدت صدا', exportWav: 'خروجی WAV', rendering: 'در حال رندر…', exportMidi: 'خروجی MIDI',
     midi: 'میدی', noMidi: 'دستگاه میدی نیست', midiDevices: 'دستگاه میدی',
     achievements: 'دستاوردها',
     ach_first_song: 'اولین آهنگ', ach_first_song_d: 'یک درس را تمام کن',

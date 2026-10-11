@@ -44,6 +44,7 @@ const ComposeMode = {
         <button class="btn" id="cmp-save">${t('save')}</button>
         <button class="btn" id="cmp-export">${t('export')}</button>
         <button class="btn" id="cmp-wav">${t('exportWav')}</button>
+        <button class="btn" id="cmp-midi">${t('exportMidi')}</button>
         <label class="btn file-btn">${t('import')}<input type="file" id="cmp-import" accept=".json" hidden></label>
         <button class="btn danger" id="cmp-clear">${t('clear')}</button>
       </div>
@@ -107,6 +108,7 @@ const ComposeMode = {
     root.querySelector('#cmp-save').onclick = () => this.save();
     root.querySelector('#cmp-export').onclick = () => this.exportSong();
     root.querySelector('#cmp-wav').onclick = () => this.exportWav();
+    root.querySelector('#cmp-midi').onclick = () => this.exportMidi();
     root.querySelector('#cmp-import').onchange = e => this.importSong(e.target.files[0]);
     root.querySelector('#cmp-clear').onclick = () => {
       if (confirm(t('confirmClear'))) {
@@ -525,6 +527,21 @@ const ComposeMode = {
     } finally {
       btn.disabled = false;
       btn.textContent = t('exportWav');
+    }
+  },
+
+  exportMidi() {
+    try {
+      const bytes = window.buildMidiFile(this.tracks, this.bpm, this.steps, this.swing);
+      const blob = new Blob([bytes], { type: 'audio/midi' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'tonora-song.mid';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      TonoraAchievements.unlock('exporter');
+    } catch (e) {
+      alert('MIDI export failed');
     }
   },
 

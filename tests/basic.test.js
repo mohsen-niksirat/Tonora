@@ -2,6 +2,7 @@ const assert = require('assert');
 
 // Load the REAL audio engine logic (pure helpers) instead of re-implementing it.
 const { noteToFreq, NOTE_OFFSET, audioBufferToWav } = require('../js/audio.js');
+const { noteNameToMidi, vlq, buildMidiFile } = require('../js/midi.js');
 
 let passed = 0;
 function test(name, fn) {
@@ -52,6 +53,28 @@ test('audioBufferToWav writes a valid RIFF/WAVE header', () => {
   assert.strictEqual(blob.type, 'audio/wav');
   // 44-byte header + 100 frames * 1 channel * 2 bytes
   assert.strictEqual(blob.size, 44 + frames * 2);
+});
+
+test('noteNameToMidi maps A4 to 69 and C#4 to 61', () => {
+  assert.strictEqual(noteNameToMidi('A4'), 69);
+  assert.strictEqual(noteNameToMidi('C#4'), 61);
+  assert.strictEqual(noteNameToMidi('nope'), null);
+});
+
+test('vlq encodes values across the 7-bit boundary', () => {
+  assert.deepStrictEqual(vlq(0), [0]);
+  assert.deepStrictEqual(vlq(127), [127]);
+  assert.deepStrictEqual(vlq(128), [0x81, 0x00]);
+});
+
+test('buildMidiFile emits valid MThd/MTrk chunks', () => {
+  const bytes = buildMidiFile(
+    { melody: ['C4', null], bass: [null, 'C3'], drums: [true, false], velocity: 0.8 },
+    120, 2, false
+  );
+  assert.ok(bytes instanceof Uint8Array);
+  assert.strictEqual(String.fromCharCode(...bytes.slice(0, 4)), 'MThd');
+  assert.strictEqual(String.fromCharCode(...bytes.slice(14, 18)), 'MTrk');
 });
 
 if (process.exitCode) {
