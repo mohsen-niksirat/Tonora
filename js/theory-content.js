@@ -141,6 +141,24 @@ const THEORY_LESSONS = [
     type: 'scale',
     scale: 'G major',
     octave: 3
+  },
+  {
+    id: 'ear-intervals',
+    title: { en: 'Ear: Intervals', fa: 'گوش: فاصله‌ها' },
+    blurb: { en: 'Listen to two notes and name the distance between them.', fa: 'به دو نت گوش کن و فاصلهٔ بین آن‌ها را نام ببر.' },
+    type: 'ear',
+    kind: 'interval',
+    roots: ['C4', 'G4', 'F4', 'A4'],
+    pool: ['2M', '3M', '4P', '5P', '6M', '8P']
+  },
+  {
+    id: 'ear-chords',
+    title: { en: 'Ear: Triads', fa: 'گوش: سه‌صداها' },
+    blurb: { en: 'Major sounds bright, minor sounds dark.', fa: 'صدای ماژور درخشان و صدای مینور تاریک و غمگین است.' },
+    type: 'ear',
+    kind: 'chord',
+    roots: ['C4', 'A3', 'F3', 'G3'],
+    pool: ['maj', 'min']
   }
 ];
 
@@ -153,6 +171,11 @@ function expectedFor(lesson, q) {
   if (lesson.type === 'interval') return [noteTranspose(lesson.root, q.interval)];
   if (lesson.type === 'chord') return chordNotes(q.root, lesson.quality);
   if (lesson.type === 'scale') return scaleNotes(lesson.scale, lesson.octave);
+  if (lesson.type === 'ear') {
+    const root = (q && q.root) || lesson.roots[0] || lesson.root || 'C4';
+    if (lesson.kind === 'chord') return chordNotes(root, q.choice);
+    return [root, noteTranspose(root, q.choice)];
+  }
   return [];
 }
 

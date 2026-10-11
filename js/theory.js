@@ -83,6 +83,7 @@ const TheoryMode = {
 
   newQuestion() {
     this.played = [];
+    this.stopPlayback();
     const lesson = this.lesson;
     if (!lesson) return;
     const T = window.TonoraTheory;
@@ -120,14 +121,36 @@ const TheoryMode = {
       this.playIsChord = false;
       promptText = `${t('playScale')}: ${lesson.scale}`;
       promptAbc = TonoraNotation.abcFromNotes(this.expected, { qpm: 96 });
+    } else if (lesson.type === 'ear') {
+      const roots = (lesson.roots && lesson.roots.length) ? lesson.roots : [lesson.root || 'C4'];
+      const root = roots[Math.floor(Math.random() * roots.length)];
+      const choice = lesson.pool[Math.floor(Math.random() * lesson.pool.length)];
+      this.question = { root, choice };
+      this.expected = T.expectedFor(lesson, this.question);
+      this.playNotes = this.expected;
+      this.playIsChord = lesson.kind === 'chord';
+      promptText = t('whatDidYouHear');
+      promptAbc = '';
     }
 
     this.promptText = promptText;
     const prompt = document.getElementById('th-prompt');
     if (prompt) prompt.textContent = promptText;
     const board = document.getElementById('th-board');
-    this.visual = TonoraNotation.render(board, promptAbc);
+    if (lesson.type === 'ear') {
+      this.visual = null;
+      if (board) board.innerHTML = '<div class="theory-mystery">♪</div>';
+    } else {
+      this.visual = TonoraNotation.render(board, promptAbc);
+    }
     this.renderActions();
+  },
+
+  earLabel(c) {
+    const L = this.lesson;
+    if (L && L.kind === 'chord') return c === 'min' ? t('minor') : t('major');
+    const T = window.TonoraTheory;
+    return (T && T.intervalLabel(c)) || c;
   },
 
   renderActions() {
@@ -143,6 +166,15 @@ const TheoryMode = {
     next.textContent = `⏭️ ${t('skip')}`;
     next.onclick = () => this.newQuestion();
     actions.appendChild(hear);
+    if (this.lesson && this.lesson.type === 'ear' && this.question) {
+      this.lesson.pool.forEach(c => {
+        const b = document.createElement('button');
+        b.className = 'btn theory-choice';
+        b.textContent = this.earLabel(c);
+        b.onclick = () => this.judge(c === this.question.choice);
+        actions.appendChild(b);
+      });
+    }
     actions.appendChild(next);
   },
 
@@ -172,6 +204,7 @@ const TheoryMode = {
     const inst = this.inst();
     if (inst) window.TonoraAudio.playNote(inst, note);
     const type = this.lesson.type;
+    if (type === 'ear') return;   // answer with the choice buttons, keys just play
 
     if (type === 'note' || type === 'interval') {
       this.judge(note === this.expected[0]);

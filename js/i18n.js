@@ -38,7 +38,8 @@ const I18N = {
     theoryOffline: 'Theory lessons need an internet connection to load the notation engine.',
     playThisNote: 'Read the note and play it on the keyboard',
     playInterval: 'Play the note', above: 'above', playChord: 'Play the chord', playScale: 'Play the scale',
-    minor: 'Minor', major: 'Major', hearIt: 'Hear it', skip: 'Skip', correct: 'Correct!', tryAgain: 'Try again'
+    minor: 'Minor', major: 'Major', hearIt: 'Hear it', skip: 'Skip', correct: 'Correct!', tryAgain: 'Try again',
+    whatDidYouHear: 'What did you hear?', listenAgain: 'Listen again'
   },
   fa: {
     play: 'اجرا', learn: 'آموزش', compose: 'آهنگسازی', theory: 'تئوری',
@@ -76,7 +77,8 @@ const I18N = {
     theoryOffline: 'درس‌های تئوری برای بارگذاری موتور نت به اینترنت نیاز دارند.',
     playThisNote: 'نت را بخوان و روی کیبورد بنواز',
     playInterval: 'نت را بنواز', above: 'بالای', playChord: 'آکورد را بنواز', playScale: 'گام را بنواز',
-    minor: 'مینور', major: 'ماژور', hearIt: 'بشنو', skip: 'رد کردن', correct: 'درست است!', tryAgain: 'دوباره تلاش کن'
+    minor: 'مینور', major: 'ماژور', hearIt: 'بشنو', skip: 'رد کردن', correct: 'درست است!', tryAgain: 'دوباره تلاش کن',
+    whatDidYouHear: 'چه شنیدی؟', listenAgain: 'دوباره گوش کن'
   }
 };
 

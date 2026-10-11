@@ -5,7 +5,7 @@ const { noteToFreq, NOTE_OFFSET, audioBufferToWav } = require('../js/audio.js');
 const { noteNameToMidi, vlq, buildMidiFile } = require('../js/midi.js');
 const { parseMidiFile, midiToTracks, midiToNoteName } = require('../js/midi.js');
 const { buildBacking, pcToNote, inferKeyRoot, pcOf } = require('../js/backing.js');
-const { expectedFor, validateAnswer, scaleNotes, chordNotes, noteTranspose } = require('../js/theory-content.js');
+const { expectedFor, validateAnswer, scaleNotes, chordNotes, noteTranspose, THEORY_LESSONS } = require('../js/theory-content.js');
 
 let passed = 0;
 function test(name, fn) {
@@ -161,6 +161,33 @@ test('validateAnswer accepts the correct chord and rejects wrong notes', () => {
 test('expectedFor resolves an interval question', () => {
   const lesson = { type: 'interval', root: 'C4' };
   assert.deepStrictEqual(expectedFor(lesson, { interval: '3M' }), ['E4']);
+});
+
+test('ear lessons resolve both interval and chord choices', () => {
+  const interval = { type: 'ear', kind: 'interval', roots: ['C4'], pool: ['3M'] };
+  assert.deepStrictEqual(expectedFor(interval, { root: 'C4', choice: '3M' }), ['C4', 'E4']);
+  assert.deepStrictEqual(expectedFor(interval, { root: 'F4', choice: '5P' }), ['F4', 'C5']);
+  const chord = { type: 'ear', kind: 'chord', roots: ['A3'], pool: ['min'] };
+  assert.deepStrictEqual(expectedFor(chord, { root: 'A3', choice: 'min' }), ['A3', 'C4', 'E4']);
+  assert.deepStrictEqual(expectedFor(chord, { root: 'C4', choice: 'maj' }), ['C4', 'E4', 'G4']);
+});
+
+test('every curriculum lesson has a resolvable answer', () => {
+  const sampleFor = l => {
+    if (l.type === 'note') return l.pool[0];
+    if (l.type === 'interval') return { interval: l.intervals[0] };
+    if (l.type === 'chord') return { root: l.roots[0] };
+    if (l.type === 'scale') return {};
+    if (l.type === 'ear') return { root: l.roots[0], choice: l.pool[0] };
+    return {};
+  };
+  THEORY_LESSONS.forEach(l => {
+    const got = expectedFor(l, sampleFor(l));
+    assert.ok(got.length > 0, `no answer for lesson ${l.id}`);
+    got.forEach(n => assert.ok(/^[A-G][#b]?-?\d$/.test(n), `bad note ${n} in ${l.id}`));
+  });
+  const earIds = THEORY_LESSONS.filter(l => l.type === 'ear').map(l => l.id);
+  assert.ok(earIds.includes('ear-intervals') && earIds.includes('ear-chords'), 'ear lessons missing');
 });
 
 if (process.exitCode) {

@@ -164,6 +164,23 @@ test('Theory mode renders a lesson and answering does not throw', () => {
   TheoryMode.leave();
 });
 
+test('Ear training hides the answer and grades from choice buttons', () => {
+  const TheoryMode = g('TheoryMode');
+  app().innerHTML = '';
+  TheoryMode.enter(app());
+  const tab = app().querySelector('.theory-tab[data-id="ear-intervals"]');
+  assert.ok(tab, 'no ear-intervals tab');
+  tab.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  assert.ok(app().querySelector('.theory-mystery'), 'the answer was not hidden');
+  const choices = app().querySelectorAll('.theory-choice');
+  assert.strictEqual(choices.length, 6, `expected 6 choices, got ${choices.length}`);
+  choices[0].dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  const prompt = (app().querySelector('#th-prompt') || {}).textContent || '';
+  assert.ok(prompt.startsWith('✅') || prompt.startsWith('❌'), `judge did not run: ${prompt}`);
+  assert.deepStrictEqual(errors, []);
+  TheoryMode.leave();
+});
+
 test('switching modes repeatedly leaves no stale state or errors', () => {
   ['play', 'learn', 'compose', 'theory'].forEach(id => {
     const mode = { play: g('PlayMode'), learn: g('LearnMode'), compose: g('ComposeMode'), theory: g('TheoryMode') }[id];

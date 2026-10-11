@@ -287,7 +287,13 @@ html[dir="rtl"] .kb-table { text-align: right; }
   overflow-x: auto;
 }
 .theory-board svg { max-width: 100%; }
-.theory-actions { display: flex; gap: .6rem; }
+.theory-actions { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; }
+.theory-choice { min-width: 7rem; }
+.theory-mystery {
+  font-size: 3.5rem; font-weight: 700; color: var(--accent); line-height: 1;
+  animation: thPulse 1.7s ease-in-out infinite; user-select: none;
+}
+@keyframes thPulse { 0%,100% { opacity:.4; transform: scale(.94); } 50% { opacity:1; transform: scale(1.07); } }
 .theory-piano { width: 100%; max-width: 860px; }
 .theory-piano .piano { margin-top: 0; }
 .theory-board .highlight path,
