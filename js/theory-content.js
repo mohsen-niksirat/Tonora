@@ -11,7 +11,10 @@ function getTonal() {
   }
   return null;
 }
-const Tonal = getTonal();
+// NOTE: must not be named `Tonal` — the tonal CDN bundle declares a global
+// `var Tonal`, and a top-level `const Tonal` here would throw
+// "Identifier 'Tonal' has already been declared", killing this whole file.
+const TONAL = getTonal();
 
 const SEMIS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const BASE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -43,7 +46,7 @@ function assignOctaves(pcs, startOctave) {
 }
 
 function noteTranspose(root, interval) {
-  if (Tonal && Tonal.Note) return Tonal.Note.transpose(root, interval);
+  if (TONAL && TONAL.Note) return TONAL.Note.transpose(root, interval);
   const p = parsePc(root);
   const semis = INTERVAL_SEMIS[interval];
   if (!p || semis == null) return root;
@@ -54,10 +57,10 @@ function chordNotes(root, quality) {
   const p = parsePc(root);
   if (!p) return [];
   let pcs = null;
-  if (Tonal && Tonal.Chord) {
+  if (TONAL && TONAL.Chord) {
     const alias = { maj: 'maj', min: 'min', dim: 'dim', aug: 'aug', sus4: 'sus4', maj7: 'maj7', min7: 'm7', dom7: '7' }[quality];
     if (alias) {
-      const ch = Tonal.Chord.get(root.replace(/\d/, '') + alias);
+      const ch = TONAL.Chord.get(root.replace(/\d/, '') + alias);
       if (ch && ch.notes && ch.notes.length) pcs = ch.notes;
     }
   }
@@ -67,8 +70,8 @@ function chordNotes(root, quality) {
 
 function scaleNotes(scale, octave) {
   let pcs = null;
-  if (Tonal && Tonal.Scale) {
-    const s = Tonal.Scale.get(scale);
+  if (TONAL && TONAL.Scale) {
+    const s = TONAL.Scale.get(scale);
     if (s && s.notes && s.notes.length) pcs = s.notes;
   }
   if (!pcs) {
