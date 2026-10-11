@@ -46,6 +46,12 @@ const ComposeMode = {
         <button class="btn" id="cmp-wav">${t('exportWav')}</button>
         <button class="btn" id="cmp-midi">${t('exportMidi')}</button>
         <label class="btn file-btn">${t('import')}<input type="file" id="cmp-import" accept=".json" hidden></label>
+        <label class="btn file-btn">🎼 ${t('importMidi')}<input type="file" id="cmp-import-midi" accept=".mid,.midi,audio/midi" hidden></label>
+        <select class="btn" id="cmp-projects" title="${t('projects')}" style="font-size:0.8rem; padding:0.35rem 0.5rem">
+          <option value="">📁 ${t('projects')}</option>
+        </select>
+        <button class="btn" id="cmp-saveas" title="${t('saveAs')}">＋</button>
+        <button class="btn danger" id="cmp-delproj" title="${t('delete')}">🗑</button>
         <button class="btn danger" id="cmp-clear">${t('clear')}</button>
       </div>
       <div id="cmp-mixer-panel" class="hidden" style="background:var(--bg2); padding:1rem; border-radius:0.5rem; margin-bottom:1rem; display:flex; gap:1.5rem; border:1px solid rgba(255,255,255,0.1)">
@@ -110,6 +116,16 @@ const ComposeMode = {
     root.querySelector('#cmp-wav').onclick = () => this.exportWav();
     root.querySelector('#cmp-midi').onclick = () => this.exportMidi();
     root.querySelector('#cmp-import').onchange = e => this.importSong(e.target.files[0]);
+    root.querySelector('#cmp-import-midi').onchange = e => { this.importMidi(e.target.files[0]); e.target.value = ''; };
+    const projSel = root.querySelector('#cmp-projects');
+    projSel.onchange = e => { if (e.target.value) this.loadProject(e.target.value); };
+    root.querySelector('#cmp-saveas').onclick = () => {
+      const name = prompt(t('projectName'), 'Song ' + (Object.keys(this.projectList()).length + 1));
+      if (name) this.saveProject(name);
+    };
+    root.querySelector('#cmp-delproj').onclick = () => {
+      if (projSel.value && confirm(t('confirmDelete'))) this.deleteProject(projSel.value);
+    };
     root.querySelector('#cmp-clear').onclick = () => {
       if (confirm(t('confirmClear'))) {
         this.tracks = this.normalizeTracks({ melody: [], bass: [], drums: { kick:[], snare:[], hat:[] }, velocity: this.velocity });
@@ -182,6 +198,77 @@ const ComposeMode = {
 
     this.buildRoll();
     this.updateDuration();
+    this.refreshProjects();
+  },
+
+  /* ---- project slots (localStorage) ---- */
+  projectList() {
+    try { return JSON.parse(localStorage.getItem('tonora-projects')) || {}; }
+    catch (e) { return {}; }
+  },
+
+  refreshProjects(selected) {
+    const sel = document.getElementById('cmp-projects');
+    if (!sel) return;
+    const all = this.projectList();
+    const names = Object.keys(all);
+    sel.innerHTML = `<option value="">📁 ${t('projects')}</option>` +
+      names.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n}</option>`).join('');
+    if (selected && all[selected]) sel.value = selected;
+  },
+
+  saveProject(name) {
+    const all = this.projectList();
+    this.tracks.velocity = this.velocity;
+    all[name] = { bpm: this.bpm, steps: this.steps, tracks: this.tracks, savedAt: Date.now() };
+    localStorage.setItem('tonora-projects', JSON.stringify(all));
+    this.refreshProjects(name);
+    const b = document.getElementById('cmp-saveas');
+    if (b) { b.textContent = '✓'; setTimeout(() => { b.textContent = '＋'; }, 1200); }
+    TonoraAchievements.unlock('composer');
+  },
+
+  loadProject(name) {
+    const d = this.projectList()[name];
+    if (!d) return;
+    this.steps = d.steps || 32;
+    this.bpm = d.bpm || 120;
+    this.tracks = this.normalizeTracks(d.tracks);
+    if (d.tracks.velocity !== undefined) this.velocity = d.tracks.velocity;
+    const lenSel = document.getElementById('cmp-len');
+    if (lenSel) lenSel.value = this.steps;
+    const bpmIn = document.getElementById('cmp-bpm');
+    if (bpmIn) bpmIn.value = this.bpm;
+    const velIn = document.getElementById('cmp-vel');
+    if (velIn) velIn.value = this.velocity;
+    this.buildRoll();
+    if (this.buildMixerUI) this.buildMixerUI();
+    this.updateDuration();
+  },
+
+  deleteProject(name) {
+    const all = this.projectList();
+    delete all[name];
+    localStorage.setItem('tonora-projects', JSON.stringify(all));
+    this.refreshProjects();
+  },
+
+  importMidi(file) {
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const res = window.midiToTracks(new Uint8Array(r.result), this.steps);
+        this.bpm = res.bpm || this.bpm;
+        this.tracks = this.normalizeTracks(res.tracks);
+        const bpmIn = document.getElementById('cmp-bpm');
+        if (bpmIn) bpmIn.value = this.bpm;
+        this.buildRoll();
+        if (this.buildMixerUI) this.buildMixerUI();
+        this.updateDuration();
+      } catch (e) { alert('Invalid MIDI file'); }
+    };
+    r.readAsArrayBuffer(file);
   },
 
   loadPreset(key) {

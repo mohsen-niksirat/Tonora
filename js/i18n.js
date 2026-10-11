@@ -30,6 +30,8 @@ const I18N = {
     maxCombo: 'Max Combo', songsList: 'Song List', presets: 'Presets',
     mute: 'Mute', lessonComplete: 'Lesson Complete!', solo: 'Solo',
     countIn: 'Count-in', metro: 'Metro',
+    importMidi: 'Import MIDI', projects: 'Projects', saveAs: 'Save as project', delete: 'Delete',
+    projectName: 'Project name:', confirmDelete: 'Delete this project?',
     record: 'Record', stopRec: 'Stop & Save', shortcuts: 'Keyboard Shortcuts',
     recSaved: 'Recording saved!'
   },
@@ -61,6 +63,8 @@ const I18N = {
     maxCombo: 'بیشترین کمبو', songsList: 'لیست آهنگ‌ها', presets: 'الگوها',
     mute: 'بی‌صدا', lessonComplete: 'درس به پایان رسید!', solo: 'تکی',
     countIn: 'شمارش شروع', metro: 'مترونوم',
+    importMidi: 'ورودی MIDI', projects: 'پروژه‌ها', saveAs: 'ذخیره به‌عنوان پروژه', delete: 'حذف',
+    projectName: 'نام پروژه:', confirmDelete: 'این پروژه حذف شود؟',
     record: 'ضبط زنده', stopRec: 'توقف و ذخیره', shortcuts: 'کلیدهای میانبر',
     recSaved: 'فایل صوتی ذخیره شد!'
   }

@@ -1,12 +1,12 @@
 /* Tonora service worker — offline-first */
-const CACHE = 'tonora-v16';
+const CACHE = 'tonora-v17';
 const ASSETS = [
   './', './index.html', './manifest.json',
-  './css/style.css?v=16',
-  './js/i18n.js?v=16', './js/achievements.js?v=16', './js/audio.js?v=16', './js/piano.js?v=16',
-  './js/play.js?v=16', './js/learn.js?v=16', './js/compose.js?v=16', './js/theory.js?v=16',
-  './js/midi.js?v=16', './js/backing.js?v=16',
-  './data/instruments.json?v=16', './data/songs.json?v=16',
+  './css/style.css?v=17',
+  './js/i18n.js?v=17', './js/achievements.js?v=17', './js/audio.js?v=17', './js/piano.js?v=17',
+  './js/play.js?v=17', './js/learn.js?v=17', './js/compose.js?v=17', './js/theory.js?v=17',
+  './js/midi.js?v=17', './js/backing.js?v=17',
+  './data/instruments.json?v=17', './data/songs.json?v=17',
   './icons/icon-192.png', './icons/icon-512.png'
 ];
 self.addEventListener('install', e => {

@@ -102,6 +102,109 @@ function buildMidiFile(tracks, bpm, steps, swing) {
 }
 
 if (typeof window !== 'undefined') window.buildMidiFile = buildMidiFile;
+
+/* ---- SMF parser (format 0/1) → note events ---------------------------- */
+function readVarLen(data, pos) {
+  let value = 0, b;
+  do { b = data[pos++]; value = (value << 7) | (b & 0x7f); } while (b & 0x80);
+  return { value, pos };
+}
+
+const MIDI_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+function midiToNoteName(midi) {
+  return MIDI_NAMES[((midi % 12) + 12) % 12] + (Math.floor(midi / 12) - 1);
+}
+
+function parseMidiFile(input) {
+  const data = input instanceof Uint8Array ? input : new Uint8Array(input);
+  let pos = 0;
+  const readStr = (n) => { let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(data[pos++]); return s; };
+  const read32 = () => { const v = ((data[pos] << 24) | (data[pos + 1] << 16) | (data[pos + 2] << 8) | data[pos + 3]) >>> 0; pos += 4; return v; };
+  const read16 = () => { const v = (data[pos] << 8) | data[pos + 1]; pos += 2; return v; };
+
+  if (readStr(4) !== 'MThd') throw new Error('Not a MIDI file');
+  const hlen = read32();
+  const format = read16();
+  const ntrks = read16();
+  const division = read16();
+  pos += Math.max(0, hlen - 6);
+
+  const notes = [];
+  let bpm = 120;
+  for (let t = 0; t < ntrks && pos + 8 <= data.length; t++) {
+    const id = readStr(4);
+    const len = read32();
+    const end = pos + len;
+    if (id !== 'MTrk') { pos = end; continue; }
+    let tick = 0;
+    let running = 0;
+    const open = new Map();
+    while (pos < end) {
+      const dv = readVarLen(data, pos); pos = dv.pos; tick += dv.value;
+      let status = data[pos];
+      if (status & 0x80) { running = status; pos++; } else { status = running; }
+      const cmd = status & 0xf0, ch = status & 0x0f;
+      if (status === 0xFF) {
+        const type = data[pos++];
+        const ml = readVarLen(data, pos); pos = ml.pos;
+        if (type === 0x51 && ml.value === 3) {
+          const us = (data[pos] << 16) | (data[pos + 1] << 8) | data[pos + 2];
+          bpm = Math.round(60000000 / us);
+        }
+        pos += ml.value;
+      } else if (status === 0xF0 || status === 0xF7) {
+        const ml = readVarLen(data, pos); pos = ml.pos; pos += ml.value;
+      } else if (cmd === 0x90 || cmd === 0x80) {
+        const note = data[pos++]; const vel = data[pos++];
+        const key = ch * 128 + note;
+        if (cmd === 0x90 && vel > 0) {
+          const idx = notes.length;
+          notes.push({ channel: ch, midi: note, startTick: tick, endTick: tick, velocity: vel });
+          open.set(key, idx);
+        } else {
+          const idx = open.get(key);
+          if (idx !== undefined) { notes[idx].endTick = tick; open.delete(key); }
+        }
+      } else if (cmd === 0xC0 || cmd === 0xD0) { pos += 1; }
+      else if (cmd === 0xA0 || cmd === 0xB0 || cmd === 0xE0) { pos += 2; }
+      else { pos++; }
+    }
+    pos = end;
+  }
+  return { format, division: division || 480, bpm, notes };
+}
+
+/* Map parsed MIDI onto the composer's fixed 16th-note grid. */
+function midiToTracks(input, steps) {
+  const parsed = parseMidiFile(input);
+  const ppq = parsed.division || 480;
+  const stepTicks = ppq / 4;
+  const melody = new Array(steps).fill(null);
+  const bass = new Array(steps).fill(null);
+  const drums = { kick: new Array(steps).fill(false), snare: new Array(steps).fill(false), hat: new Array(steps).fill(false) };
+  const put = (arr, s, n) => {
+    const cur = arr[s];
+    if (cur === null) arr[s] = n;
+    else if (Array.isArray(cur)) { if (!cur.includes(n)) cur.push(n); }
+    else if (cur !== n) arr[s] = [cur, n];
+  };
+  parsed.notes.forEach(ev => {
+    const s = Math.round(ev.startTick / stepTicks);
+    if (s < 0 || s >= steps) return;
+    if (ev.channel === 9) {
+      if (ev.midi === 36 || ev.midi === 35) drums.kick[s] = true;
+      else if (ev.midi === 38 || ev.midi === 40) drums.snare[s] = true;
+      else if (ev.midi === 42 || ev.midi === 44) drums.hat[s] = true;
+    } else if (ev.channel === 1) {
+      put(bass, s, midiToNoteName(ev.midi));
+    } else {
+      put(melody, s, midiToNoteName(ev.midi));
+    }
+  });
+  return { bpm: parsed.bpm, steps, tracks: { melody, bass, drums } };
+}
+
+if (typeof window !== 'undefined') window.midiToTracks = midiToTracks;
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { noteNameToMidi, vlq, buildMidiFile };
+  module.exports = { noteNameToMidi, vlq, buildMidiFile, parseMidiFile, midiToTracks, midiToNoteName };
 }

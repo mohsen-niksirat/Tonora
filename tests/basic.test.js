@@ -3,6 +3,7 @@ const assert = require('assert');
 // Load the REAL audio engine logic (pure helpers) instead of re-implementing it.
 const { noteToFreq, NOTE_OFFSET, audioBufferToWav } = require('../js/audio.js');
 const { noteNameToMidi, vlq, buildMidiFile } = require('../js/midi.js');
+const { parseMidiFile, midiToTracks, midiToNoteName } = require('../js/midi.js');
 const { buildBacking, pcToNote, inferKeyRoot, pcOf } = require('../js/backing.js');
 
 let passed = 0;
@@ -106,6 +107,34 @@ test('pcToNote wraps octaves correctly', () => {
   assert.strictEqual(pcToNote(0, 3), 'C3');
   assert.strictEqual(pcToNote(11, 2), 'B2');
   assert.strictEqual(pcToNote(12, 4), 'C4');
+});
+
+test('midiToNoteName maps numbers to names', () => {
+  assert.strictEqual(midiToNoteName(60), 'C4');
+  assert.strictEqual(midiToNoteName(69), 'A4');
+});
+
+test('buildMidiFile → parseMidiFile round-trips note events', () => {
+  const tracks = {
+    melody: ['C4', null, 'E4', null],
+    bass: [null, 'C3', null, null],
+    drums: { kick: [true, false, false, false], snare: [false, false, false, false], hat: [false, true, false, true] },
+    velocity: 0.8
+  };
+  const bytes = buildMidiFile(tracks, 120, 4, false);
+  const parsed = parseMidiFile(bytes);
+  assert.strictEqual(parsed.bpm, 120);
+  assert.strictEqual(parsed.division, 480);
+  // 2 melodic + 1 bass + 3 drum note-ons
+  const ons = parsed.notes.length;
+  assert.strictEqual(ons, 6);
+  const back = midiToTracks(bytes, 4);
+  assert.strictEqual(back.tracks.melody[0], 'C4');
+  assert.strictEqual(back.tracks.melody[2], 'E4');
+  assert.strictEqual(back.tracks.bass[1], 'C3');
+  assert.strictEqual(back.tracks.drums.kick[0], true);
+  assert.strictEqual(back.tracks.drums.hat[1], true);
+  assert.strictEqual(back.tracks.drums.hat[3], true);
 });
 
 if (process.exitCode) {
