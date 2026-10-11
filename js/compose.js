@@ -293,22 +293,22 @@ const ComposeMode = {
       const groupCls = Math.floor(s / 4) % 2 === 0 ? 'g1' : 'g2';
       c.className = `roll-cell ${cls} ${groupCls} ${on ? 'on' : ''}`;
       if (text) c.textContent = text;
-      c.onclick = cb;
+      c.onclick = () => cb(c);
       return c;
     };
     // melody rows — chords: each row toggles independently
     notes.forEach(n => {
       const cells = this.tracks.melody.map((v, s) =>
-        mkCell('mel', this.stepHas(v, n), () => this.toggleNote('melody', s, n, 'piano', 0.3), s));
+        mkCell('mel', this.stepHas(v, n), (cell) => this.toggleNote('melody', s, n, 'piano', 0.3, cell), s));
       mkRow(n, cells);
     });
     // drums rows (Channel Rack style)
     const drumDefs = window.TONORA_INSTRUMENTS.find(i => i.id === 'drums');
     const mkDrumRow = (key, icon, sound) => {
       const dcells = this.tracks.drums[key].map((v, s) =>
-        mkCell('drm', v, () => {
+        mkCell('drm', v, (cell) => {
           this.tracks.drums[key][s] = !this.tracks.drums[key][s];
-          this.buildRoll();
+          cell.classList.toggle('on', this.tracks.drums[key][s]);
           if (this.tracks.drums[key][s]) window.TonoraAudio.playDrum(drumDefs, sound, 0.9);
         }, s, icon));
       mkRow(key.toUpperCase(), dcells);
@@ -319,7 +319,7 @@ const ComposeMode = {
     // bass rows
     bassNotes.forEach(n => {
       const cells = this.tracks.bass.map((v, s) =>
-        mkCell('bass', this.stepHas(v, n), () => this.toggleNote('bass', s, n, 'synth', 0.3), s));
+        mkCell('bass', this.stepHas(v, n), (cell) => this.toggleNote('bass', s, n, 'synth', 0.3, cell), s));
       mkRow(n, cells);
     });
   },
@@ -329,7 +329,7 @@ const ComposeMode = {
     return v === n;
   },
 
-  toggleNote(track, s, n, instId, previewDur) {
+  toggleNote(track, s, n, instId, previewDur, cell) {
     const arr = this.tracks[track];
     if (Array.isArray(arr[s])) {
       const i = arr[s].indexOf(n);
@@ -343,8 +343,11 @@ const ComposeMode = {
     } else {
       arr[s] = [arr[s], n]; // second note on the same step → chord
     }
-    this.buildRoll();
-    if (this.stepHas(arr[s], n) || (Array.isArray(arr[s]) && arr[s].includes(n))) {
+    const on = this.stepHas(arr[s], n);
+    // update just the clicked cell instead of rebuilding the whole roll
+    if (cell) cell.classList.toggle('on', on);
+    else this.buildRoll();
+    if (on) {
       window.TonoraAudio.playNote(this.inst(instId), n, previewDur, this.velocity);
     }
   },
