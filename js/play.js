@@ -85,9 +85,9 @@ const PlayMode = {
         if (window.TonoraAudio.isRecording) {
           recBtn.classList.remove('recording');
           recBtn.innerHTML = `⏺ ${t('record')}`;
-          const blob = await window.TonoraAudio.stopLiveRecording();
-          if (blob) {
-            const url = URL.createObjectURL(blob);
+          const rec = await window.TonoraAudio.stopLiveRecording();
+          if (rec && rec.blob) {
+            const url = URL.createObjectURL(rec.blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = `tonora-jam-${Date.now()}.webm`;

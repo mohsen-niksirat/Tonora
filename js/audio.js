@@ -135,15 +135,17 @@ class AudioEngine {
     this._mediaRecorder.ondataavailable = e => { if (e.data.size > 0) this._recChunks.push(e.data); };
     this._mediaRecorder.start(200);
     this._recStartTime = performance.now();
+    this.isRecording = true;
     return true;
   }
 
   stopLiveRecording() {
     return new Promise((resolve) => {
-      if (!this._mediaRecorder || this._mediaRecorder.state !== 'recording') { resolve(null); return; }
+      if (!this._mediaRecorder || this._mediaRecorder.state !== 'recording') { this.isRecording = false; resolve(null); return; }
       this._mediaRecorder.onstop = () => {
         const dur = (performance.now() - this._recStartTime) / 1000;
         const blob = new Blob(this._recChunks, { type: this._mediaRecorder.mimeType || 'audio/webm' });
+        this.isRecording = false;
         resolve({ blob, dur });
       };
       this._mediaRecorder.stop();
