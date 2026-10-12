@@ -48,6 +48,6 @@ module.exports = [
     }
   },
   {
-    ignores: ['node_modules/**', 'Tonora.zip']
+    ignores: ['node_modules/**', 'js/vendor/**', 'Tonora.zip']
   }
 ];

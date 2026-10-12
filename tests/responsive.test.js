@@ -54,9 +54,9 @@ function test(name, fn) {
   });
 
   await test('cache version bumped to v23 everywhere', () => {
-    assert.ok(html.includes('css/style.css?v=23'), 'css not bumped');
-    assert.ok(!/[?&]v=22/.test(html), 'stale ?v=22 reference left in index.html');
-    assert.ok(read('sw.js').includes("CACHE = 'tonora-v23'"), 'sw CACHE not bumped');
+    assert.ok(html.includes('css/style.css?v=24'), 'css not bumped');
+    assert.ok(!/[?&]v=22/.test(html), 'stale ?v=24 reference left in index.html');
+    assert.ok(read('sw.js').includes("CACHE = 'tonora-v24'"), 'sw CACHE not bumped');
   });
 
   await test('manifest gained scope/id/lang', () => {

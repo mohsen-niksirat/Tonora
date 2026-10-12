@@ -68,10 +68,20 @@ const ComposeMode = {
         <label>${t('velocity')}: <input type="range" id="cmp-vel" min="0.4" max="1" step="0.05" value="${this.velocity}" style="width:7em"></label>
         <select class="btn" id="cmp-presets" style="font-size:0.8rem; padding:0.35rem 0.5rem">
           <option value="">✨ ${t('presets')}</option>
-          <option value="pop">Pop Groove</option>
-          <option value="synthwave">Synthwave</option>
-          <option value="lofi">Lofi Chill</option>
+          <optgroup label="Song Templates">
+            <option value="pop">Pop Groove</option>
+            <option value="synthwave">Synthwave</option>
+            <option value="lofi">Lofi Chill</option>
+          </optgroup>
+          <optgroup label="Drum Patterns">
+            <option value="drums-rock">Rock Beat</option>
+            <option value="drums-hiphop">Hip-Hop</option>
+            <option value="drums-house">Four on the Floor</option>
+            <option value="drums-6-8">Persian 6/8</option>
+            <option value="drums-rap">Rap / Trap</option>
+          </optgroup>
         </select>
+        <button class="btn" id="cmp-dup" title="${t('duplicate')}">⧉</button>
         <button class="btn toggle" id="cmp-swing" title="Swing Rhythm">🎵 Swing</button>
         <button class="btn toggle" id="cmp-countin" title="Count-in before recording">🥁 ${t('countIn')}</button>
         <button class="btn toggle" id="cmp-metro" title="Metronome while playing">🎚️ ${t('metro')}</button>
@@ -160,6 +170,7 @@ const ComposeMode = {
     root.querySelector('#cmp-presets').onchange = e => {
       if (e.target.value) { this.loadPreset(e.target.value); e.target.value = ''; }
     };
+    root.querySelector('#cmp-dup').onclick = () => this.duplicatePattern();
     const wireMute = (id, key) => {
       const b = root.querySelector('#' + id);
       b.onclick = () => {
@@ -337,7 +348,91 @@ const ComposeMode = {
     r.readAsArrayBuffer(file);
   },
 
+  /* duplicate the first half of the pattern into the second half (16→32, 32→64) */
+  duplicatePattern() {
+    if (this.steps >= 64) { alert('Pattern is already 64 steps'); return; }
+    const newSteps = this.steps * 2;
+    this.snapshot();
+    const ext = (arr, def) => {
+      const out = new Array(newSteps).fill(def);
+      for (let s = 0; s < newSteps; s++) out[s] = arr && arr[s % this.steps] !== undefined ? arr[s % this.steps] : def;
+      return out;
+    };
+    this.tracks.melody = ext(this.tracks.melody, null);
+    this.tracks.bass = ext(this.tracks.bass, null);
+    if (this.tracks.drums && !Array.isArray(this.tracks.drums)) {
+      this.tracks.drums.kick = ext(this.tracks.drums.kick, false);
+      this.tracks.drums.snare = ext(this.tracks.drums.snare, false);
+      this.tracks.drums.hat = ext(this.tracks.drums.hat, false);
+    }
+    this.steps = newSteps;
+    const lenSel = document.getElementById('cmp-len');
+    if (lenSel) lenSel.value = this.steps;
+    this.buildRoll();
+    this.updateDuration();
+  },
+
+  /* clear one track only (used by per-row clear buttons) */
+  clearTrack(track, drumKey) {
+    this.snapshot();
+    if (track === 'drums' && drumKey) {
+      this.tracks.drums[drumKey] = new Array(this.steps).fill(false);
+    } else {
+      this.tracks[track] = new Array(this.steps).fill(track === 'drums' ? false : null);
+    }
+    this.buildRoll();
+  },
+
   loadPreset(key) {
+    const DRUM_PRESETS = {
+      'drums-rock': {
+        drums: {
+          kick:  [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+          snare: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+          hat:   [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,1]
+        }
+      },
+      'drums-hiphop': {
+        drums: {
+          kick:  [1,0,0,0, 0,0,1,0, 0,0,1,0, 0,0,0,0],
+          snare: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+          hat:   [1,1,0,1, 1,0,1,1, 0,1,1,0, 1,1,0,1]
+        }
+      },
+      'drums-house': {
+        drums: {
+          kick:  [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
+          snare: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+          hat:   [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0]
+        }
+      },
+      'drums-6-8': {
+        drums: {
+          kick:  [1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0,0],
+          snare: [0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1,0],
+          hat:   [1,0,1, 1,0,1, 1,0,1, 1,0,1, 1,0,1,0]
+        }
+      },
+      'drums-rap': {
+        drums: {
+          kick:  [1,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0],
+          snare: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+          hat:   [1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1]
+        }
+      }
+    };
+    if (DRUM_PRESETS[key]) {
+      this.snapshot();
+      const src = DRUM_PRESETS[key].drums;
+      const fit = arr => {
+        const out = new Array(this.steps).fill(false);
+        for (let s = 0; s < this.steps; s++) out[s] = !!(arr && arr[s % arr.length]);
+        return out;
+      };
+      this.tracks.drums = { kick: fit(src.kick), snare: fit(src.snare), hat: fit(src.hat) };
+      this.buildRoll();
+      return;
+    }
     const PRESETS = {
       pop: {
         bpm: 120, velocity: 0.85,

@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
 <title>Tonora 🎹</title>
-<link rel="stylesheet" href="css/style.css?v=23">
+<link rel="stylesheet" href="css/style.css?v=24">
 <script>
 /* set dir before first paint to avoid an LTR flash in Persian */
 try {
@@ -108,20 +108,20 @@ try {
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/abcjs@6.7.1/dist/abcjs-basic-min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tonal@6.4.0/browser/tonal.min.js"></script>
-<script src="js/i18n.js?v=23"></script>
-<script src="js/achievements.js?v=23"></script>
-<script src="js/audio.js?v=23"></script>
-<script src="js/piano.js?v=23"></script>
-<script src="js/play.js?v=23"></script>
-<script src="js/learn.js?v=23"></script>
-<script src="js/backing.js?v=23"></script>
-<script src="js/midi.js?v=23"></script>
-<script src="js/compose.js?v=23"></script>
-<script src="js/theory-content.js?v=23"></script>
-<script src="js/notation.js?v=23"></script>
-<script src="js/theory.js?v=23"></script>
+<script src="js/vendor/abcjs-basic-min.js?v=24"></script>
+<script src="js/vendor/tonal.min.js?v=24"></script>
+<script src="js/i18n.js?v=24"></script>
+<script src="js/achievements.js?v=24"></script>
+<script src="js/audio.js?v=24"></script>
+<script src="js/piano.js?v=24"></script>
+<script src="js/play.js?v=24"></script>
+<script src="js/learn.js?v=24"></script>
+<script src="js/backing.js?v=24"></script>
+<script src="js/midi.js?v=24"></script>
+<script src="js/compose.js?v=24"></script>
+<script src="js/theory-content.js?v=24"></script>
+<script src="js/notation.js?v=24"></script>
+<script src="js/theory.js?v=24"></script>
 <script>
 'use strict';
 window.__jsErrors = [];
@@ -132,8 +132,8 @@ let INSTRUMENTS = [], SONGS = [];
 
 async function loadData() {
   const [i, s] = await Promise.all([
-    fetch('data/instruments.json?v=23').then(r => r.json()),
-    fetch('data/songs.json?v=23').then(r => r.json())
+    fetch('data/instruments.json?v=24').then(r => r.json()),
+    fetch('data/songs.json?v=24').then(r => r.json())
   ]);
   INSTRUMENTS = i.instruments;
   SONGS = s.songs;
