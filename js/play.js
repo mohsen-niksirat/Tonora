@@ -86,6 +86,7 @@ const PlayMode = {
           </select>
           <button class="btn toggle-btn" id="sustain-btn" title="Space">🦶 ${t('sustain')}</button>
           <button class="btn toggle-btn" id="arp-btn" title="Hold notes to arpeggiate">🎶 Arp</button>
+          <button class="btn toggle-btn" id="capture-btn" title="${t('capture')}">● ${t('capture')}</button>
           <button class="btn" id="rec-btn" title="Record live session">⏺ ${t('record')}</button>
           <div class="midi-box hidden" id="midi-box"></div>
         </div>
@@ -215,6 +216,34 @@ const PlayMode = {
         }
       };
     }
+    // ---- note capture: record played notes with timing → send to Compose ----
+    this.capturing = false;
+    this.captureData = null;
+    const captureBtn = root.querySelector('#capture-btn');
+    if (captureBtn) {
+      captureBtn.onclick = () => {
+        if (!this.capturing) {
+          this.capturing = true;
+          this.captureData = { start: performance.now(), notes: [], bpm: 120 };
+          captureBtn.classList.add('recording');
+          captureBtn.innerHTML = `■ ${t('capture')}`;
+        } else {
+          this.capturing = false;
+          captureBtn.classList.remove('recording');
+          captureBtn.innerHTML = `● ${t('capture')}`;
+          if (this.captureData && this.captureData.notes.length) {
+            this.sendCaptureToCompose(this.captureData);
+          }
+          this.captureData = null;
+        }
+      };
+    }
+    this._recordNote = (note, velocity) => {
+      if (!this.capturing || !this.captureData) return;
+      const t = (performance.now() - this.captureData.start) / 1000;
+      const stepDur = 60 / this.captureData.bpm / 4;
+      this.captureData.notes.push({ n: note, t: Math.round(t / stepDur) * stepDur, d: stepDur, v: velocity || 0.8 });
+    };
     const recBtn = root.querySelector('#rec-btn');
     if (recBtn && window.TonoraAudio.isRecording) {
       recBtn.classList.add('recording');
@@ -312,7 +341,8 @@ const PlayMode = {
         startOctave: this.octave,
         scale: this.scaleGuide,
         tuning: this.tuningMap,
-        onNote: (note) => {
+        onNote: (note, vel) => {
+          if (this._recordNote) this._recordNote(note, vel);
           if (this.arpActive) return;
           const dur = (this.piano && this.piano.sustain) ? 3.0 : 0;
           if (this.chordMode && window.TonoraTheory && window.TonoraTheory.chordNotes) {
@@ -321,6 +351,7 @@ const PlayMode = {
               notes.forEach(n => {
                 window.TonoraAudio.playNote(inst, n, dur);
                 if (n !== note && this.piano) this.piano.flash(n);
+                if (this._recordNote) notes.forEach(x => { if (x !== note) this._recordNote(x, vel); });
               });
               return;
             }
@@ -407,6 +438,7 @@ const PlayMode = {
           window.TonoraAudio.playNote(this.inst(this.current), tunedName, 0, Math.max(0.4, vel / 127));
           this.piano.press(name);
           setTimeout(() => this.piano.release(name), 200);
+          if (this._recordNote) this._recordNote(name, vel / 127);
         }
         TonoraAchievements.unlock('midi');
       } else if (cmd === 0x80 || (cmd === 0x90 && vel === 0)) {
@@ -419,6 +451,36 @@ const PlayMode = {
     const names = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
     const oct = Math.floor(n / 12) - 1;
     return names[n % 12] + oct;
+  },
+
+  /* map captured live notes onto a 16th-note grid and push into Compose */
+  sendCaptureToCompose(capture) {
+    const bpm = (capture && capture.bpm) || 120;
+    const stepDur = 60 / bpm / 4;
+    const notes = (capture && capture.notes) || [];
+    const qStep = notes.map(e => ({
+      step: Math.max(0, Math.round(e.t / stepDur)),
+      n: e.n
+    }));
+    const maxStep = qStep.reduce((a, e) => Math.max(a, e.step), 0);
+    const steps = Math.min(64, Math.max(16, Math.pow(2, Math.ceil(Math.log2(maxStep + 4)) ) ));
+    const melody = new Array(steps).fill(null);
+    qStep.forEach(e => {
+      if (e.step >= steps) return;
+      const cur = melody[e.step];
+      if (cur === null) melody[e.step] = e.n;
+      else if (Array.isArray(cur)) { if (!cur.includes(e.n)) cur.push(e.n); }
+      else if (cur !== e.n) melody[e.step] = [cur, e.n];
+    });
+    window.__composeInbox = { bpm, steps, tracks: { melody, bass: new Array(steps).fill(null), drums: { kick: new Array(steps).fill(false), snare: new Array(steps).fill(false), hat: new Array(steps).fill(false) } } };
+    if (typeof window.navigateTo === 'function') {
+      window.navigateTo('compose');
+      setTimeout(() => {
+        if (window.ComposeMode && typeof window.ComposeMode.consumeInbox === 'function') {
+          window.ComposeMode.consumeInbox();
+        }
+      }, 50);
+    }
   },
 
   leave() {

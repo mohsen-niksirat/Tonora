@@ -30,7 +30,7 @@ if (!window.localStorage) {
 window.TONORA_INSTRUMENTS = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'instruments.json'), 'utf8')).instruments;
 
 const files = [
-  'i18n.js', 'achievements.js', 'audio.js', 'midi.js', 'backing.js', 'theory-content.js',
+  'i18n.js', 'store.js', 'achievements.js', 'audio.js', 'midi.js', 'backing.js', 'theory-content.js',
   'notation.js', 'piano.js', 'play.js', 'learn.js', 'compose.js', 'theory.js'
 ];
 let source = files.map(f => fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8')).join('\n;\n');
@@ -302,6 +302,67 @@ test('PianoUI has keyboard shortcuts across both octaves and responds to keyboar
 
   p3.destroy();
   container.remove();
+});
+
+/* ---- Phase 2 additions ---- */
+
+test('TonoraStore falls back to localStorage when IDB is unavailable', async () => {
+  const S = window.TonoraStore;
+  assert.ok(S, 'TonoraStore missing');
+  // jsdom has no indexedDB, so _idb should be null → localStorage path
+  await S.set('demo', { bpm: 90, steps: 16, tracks: { melody: ['C4'] } });
+  const names = await S.list();
+  assert.ok(names.includes('demo'), 'project not listed');
+  const got = await S.get('demo');
+  assert.strictEqual(got.bpm, 90);
+  const all = await S.all();
+  assert.ok(all.demo, 'project not in all()');
+  await S.del('demo');
+  assert.strictEqual(await S.get('demo'), null);
+});
+
+test('PlayMode note capture quantizes to a 16th grid and hands off to Compose', async () => {
+  const PM = window.__test.PlayMode;
+  // simulate a recorded capture: notes at 0, ~0.25s, ~0.5s @120bpm → steps 0,2,4
+  const cap = {
+    bpm: 120,
+    notes: [
+      { n: 'C4', t: 0, d: 0.125, v: 0.8 },
+      { n: 'E4', t: 0.26, d: 0.125, v: 0.8 },  // step ≈2.08 → 2
+      { n: 'G4', t: 0.51, d: 0.125, v: 0.8 },  // step ≈4.08 → 4
+      { n: 'E4', t: 0.51, d: 0.125, v: 0.8 }   // same step → chord
+    ]
+  };
+  PM.sendCaptureToCompose(cap);
+  const inbox = window.__composeInbox;
+  assert.ok(inbox, 'inbox not set');
+  assert.strictEqual(inbox.tracks.melody[0], 'C4');
+  assert.strictEqual(inbox.tracks.melody[2], 'E4');
+  assert.ok(Array.isArray(inbox.tracks.melody[4]) && inbox.tracks.melody[4].includes('G4'), 'chord not grouped');
+  assert.strictEqual(inbox.bpm, 120);
+});
+
+test('ComposeMode consumeInbox loads a captured performance into the roll', () => {
+  const CM = window.__test.ComposeMode;
+  // drop an inbox directly (skip navigation)
+  window.__composeInbox = {
+    bpm: 100, steps: 16,
+    tracks: { melody: ['C4', null, 'E4'], bass: [], drums: { kick: [true], snare: [], hat: [] } }
+  };
+  CM.steps = 16;
+  const ok = CM.consumeInbox();
+  assert.strictEqual(ok, true);
+  assert.strictEqual(CM.bpm, 100);
+  assert.strictEqual(CM.tracks.melody[0], 'C4');
+  assert.strictEqual(CM.tracks.melody[2], 'E4');
+  assert.strictEqual(window.__composeInbox, null, 'inbox should be cleared');
+});
+
+test('ComposeMode setHumanize clamps the range', () => {
+  const CM = window.__test.ComposeMode;
+  CM.setHumanize(999); assert.strictEqual(CM.humanize, 60);
+  CM.setHumanize(-5); assert.strictEqual(CM.humanize, 0);
+  CM.setHumanize(25); assert.strictEqual(CM.humanize, 25);
 });
 
 if (process.exitCode) {

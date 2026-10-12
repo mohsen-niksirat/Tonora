@@ -85,6 +85,7 @@ const ComposeMode = {
         <button class="btn toggle" id="cmp-swing" title="Swing Rhythm">🎵 Swing</button>
         <button class="btn toggle" id="cmp-countin" title="Count-in before recording">🥁 ${t('countIn')}</button>
         <button class="btn toggle" id="cmp-metro" title="Metronome while playing">🎚️ ${t('metro')}</button>
+        <label title="Humanize (timing variation)">🤹 <input type="range" id="cmp-human" min="0" max="60" step="5" value="${this.humanize || 0}" style="width:6em"></label>
         <button class="btn" id="cmp-mixer-btn">🎚️ Mixer</button>
         <button class="btn toggle" id="mute-mel" title="Mute melody">🎹 ${t('melody')}</button>
         <button class="btn toggle" id="mute-drm" title="Mute drums">🥁 ${t('drums')}</button>
@@ -167,6 +168,11 @@ const ComposeMode = {
       this.metronome = !this.metronome;
       metroBtn.classList.toggle('active', this.metronome);
     };
+    const humanSlider = root.querySelector('#cmp-human');
+    if (humanSlider) {
+      humanSlider.value = this.humanize || 0;
+      humanSlider.oninput = e => this.setHumanize(+e.target.value);
+    }
     root.querySelector('#cmp-presets').onchange = e => {
       if (e.target.value) { this.loadPreset(e.target.value); e.target.value = ''; }
     };
@@ -276,35 +282,55 @@ const ComposeMode = {
     this.refreshProjects();
   },
 
-  /* ---- project slots (localStorage) ---- */
+  /* ---- project slots (IndexedDB via TonoraStore, localStorage fallback) ---- */
   projectList() {
-    try { return JSON.parse(localStorage.getItem('tonora-projects')) || {}; }
+    // sync read of the localStorage mirror (kept in sync by refreshProjects)
+    try { return JSON.parse(localStorage.getItem('tonora-projects-mirror')) || {}; }
     catch (e) { return {}; }
   },
 
-  refreshProjects(selected) {
+  async refreshProjects(selected) {
     const sel = document.getElementById('cmp-projects');
     if (!sel) return;
+    let names = [];
+    if (window.TonoraStore) {
+      try {
+        await window.TonoraStore.migrate();
+        names = await window.TonoraStore.list();
+        // mirror for sync reads elsewhere
+        const all = await window.TonoraStore.all();
+        localStorage.setItem('tonora-projects-mirror', JSON.stringify(all));
+      } catch (e) {
+        names = Object.keys(this.projectList());
+      }
+    } else {
+      names = Object.keys(this.projectList());
+    }
     const all = this.projectList();
-    const names = Object.keys(all);
     sel.innerHTML = `<option value="">📁 ${t('projects')}</option>` +
       names.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n}</option>`).join('');
-    if (selected && all[selected]) sel.value = selected;
+    if (selected && (all[selected] || names.includes(selected))) sel.value = selected;
   },
 
-  saveProject(name) {
-    const all = this.projectList();
+  async saveProject(name) {
     this.tracks.velocity = this.velocity;
-    all[name] = { bpm: this.bpm, steps: this.steps, tracks: this.tracks, savedAt: Date.now() };
-    localStorage.setItem('tonora-projects', JSON.stringify(all));
+    const data = { bpm: this.bpm, steps: this.steps, tracks: this.tracks, savedAt: Date.now() };
+    if (window.TonoraStore) await window.TonoraStore.set(name, data);
+    else {
+      const all = this.projectList();
+      all[name] = data;
+      localStorage.setItem('tonora-projects-mirror', JSON.stringify(all));
+    }
     this.refreshProjects(name);
     const b = document.getElementById('cmp-saveas');
     if (b) { b.textContent = '✓'; setTimeout(() => { b.textContent = '＋'; }, 1200); }
     TonoraAchievements.unlock('composer');
   },
 
-  loadProject(name) {
-    const d = this.projectList()[name];
+  async loadProject(name) {
+    let d = null;
+    if (window.TonoraStore) d = await window.TonoraStore.get(name);
+    else d = this.projectList()[name];
     if (!d) return;
     this.snapshot();
     this.steps = d.steps || 32;
@@ -322,11 +348,20 @@ const ComposeMode = {
     this.updateDuration();
   },
 
-  deleteProject(name) {
-    const all = this.projectList();
-    delete all[name];
-    localStorage.setItem('tonora-projects', JSON.stringify(all));
+  async deleteProject(name) {
+    if (window.TonoraStore) await window.TonoraStore.del(name);
+    else {
+      const all = this.projectList();
+      delete all[name];
+      localStorage.setItem('tonora-projects-mirror', JSON.stringify(all));
+    }
     this.refreshProjects();
+  },
+
+  /* legacy: keep old test-hook access to projects via localStorage mirror */
+  legacyProjectList() {
+    try { return JSON.parse(localStorage.getItem('tonora-projects')) || {}; }
+    catch (e) { return {}; }
   },
 
   importMidi(file) {
@@ -736,25 +771,28 @@ const ComposeMode = {
     const vel = this.velocity;
     const soloed = this.solo && Object.values(this.solo).some(Boolean);
     const audible = (track) => soloed ? !!this.solo[track] : !(this.muted && this.muted[track]);
+    // humanize: random ±ms offset per step for a less robotic feel
+    const hz = Math.max(0, Math.min(60, this.humanize || 0));
+    const when = hz > 0 ? (Math.random() * 2 - 1) * (hz / 1000) : 0;
     if (audible('melody')) {
       const m = this.tracks.melody[s];
       if (m) (Array.isArray(m) ? m : [m]).forEach(n =>
-        window.TonoraAudio.playNote(this.inst('piano'), n, this.stepDur() * 2, vel, 0, { bus: 'melody' }));
+        window.TonoraAudio.playNote(this.inst('piano'), n, this.stepDur() * 2, vel, when, { bus: 'melody' }));
     }
     if (audible('bass')) {
       const b = this.tracks.bass[s];
       if (b) (Array.isArray(b) ? b : [b]).forEach(n =>
-        window.TonoraAudio.playNote(this.inst('synth'), n, this.stepDur() * 3, vel, 0, { bus: 'bass' }));
+        window.TonoraAudio.playNote(this.inst('synth'), n, this.stepDur() * 3, vel, when, { bus: 'bass' }));
     }
     if (audible('drums')) {
       const d = this.inst('drums');
       // back-compat
       if (this.tracks.drums[s] === true) {
-        window.TonoraAudio.playDrum(d, s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel, 0, { bus: 'drums' });
+        window.TonoraAudio.playDrum(d, s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel, when, { bus: 'drums' });
       } else if (typeof this.tracks.drums === 'object' && !Array.isArray(this.tracks.drums)) {
-        if (this.tracks.drums.kick && this.tracks.drums.kick[s]) window.TonoraAudio.playDrum(d, 'kick', vel, 0, { bus: 'drums' });
-        if (this.tracks.drums.snare && this.tracks.drums.snare[s]) window.TonoraAudio.playDrum(d, 'snare', vel, 0, { bus: 'drums' });
-        if (this.tracks.drums.hat && this.tracks.drums.hat[s]) window.TonoraAudio.playDrum(d, 'hat', vel, 0, { bus: 'drums' });
+        if (this.tracks.drums.kick && this.tracks.drums.kick[s]) window.TonoraAudio.playDrum(d, 'kick', vel, when, { bus: 'drums' });
+        if (this.tracks.drums.snare && this.tracks.drums.snare[s]) window.TonoraAudio.playDrum(d, 'snare', vel, when, { bus: 'drums' });
+        if (this.tracks.drums.hat && this.tracks.drums.hat[s]) window.TonoraAudio.playDrum(d, 'hat', vel, when, { bus: 'drums' });
       }
     }
   },
@@ -908,6 +946,40 @@ const ComposeMode = {
       } catch (e) { alert('Invalid file'); }
     };
     r.readAsText(file);
+  },
+
+  /* pick up a captured performance from Play mode (window.__composeInbox).
+     Safe to call before the mode has rendered — the data is applied and the
+     UI is updated only if the roll is already in the DOM. */
+  consumeInbox() {
+    const inbox = (typeof window !== 'undefined') ? window.__composeInbox : null;
+    if (!inbox) return false;
+    window.__composeInbox = null;
+    this.snapshot();
+    this.steps = inbox.steps || 32;
+    this.bpm = inbox.bpm || 120;
+    this.tracks = this.normalizeTracks(inbox.tracks || {});
+    const lenSel = document.getElementById('cmp-len'); if (lenSel) lenSel.value = this.steps;
+    const bpmIn = document.getElementById('cmp-bpm'); if (bpmIn) bpmIn.value = this.bpm;
+    if (document.getElementById('roll')) {
+      this.buildRoll();
+      if (this.buildMixerUI) this.buildMixerUI();
+      this.updateDuration();
+    }
+    return true;
+  },
+
+  /* nudge every note by ±humanize ms (kept per-step) */
+  setHumanize(v) {
+    this.humanize = Math.max(0, Math.min(60, +v || 0));
+  },
+
+  /* quantize melody + bass note positions to a 16th grid (no-op placeholder: live
+     notes are pre-quantized; kept for external file imports) */
+  quantize() {
+    this.snapshot();
+    // notes live on the grid by construction; round any fractional bookkeeping
+    this.buildRoll();
   },
 
   leave() {

@@ -6,6 +6,7 @@
 const projectGlobals = {
   // browser
   window: 'readonly', document: 'readonly', navigator: 'readonly', location: 'readonly',
+  indexedDB: 'readonly',
   localStorage: 'readonly', sessionStorage: 'readonly', devicePixelRatio: 'readonly',
   requestAnimationFrame: 'readonly', cancelAnimationFrame: 'readonly',
   setTimeout: 'readonly', clearTimeout: 'readonly', setInterval: 'readonly', clearInterval: 'readonly',

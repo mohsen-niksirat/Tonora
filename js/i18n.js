@@ -45,7 +45,8 @@ const I18N = {
     chords: 'Chords', singleNotes: 'Single', scaleGuide: 'Scale Guide', allKeys: 'All Keys',
     eqTitle: 'Equalizer & Chorus FX', eq: 'Equalizer', eqBass: 'Bass', eqMid: 'Mid', eqTreble: 'Treble',
     chorus: 'Chorus', chorusMix: 'Chorus Mix', flat: 'Flat', bassBoost: 'Bass Boost', bright: 'Bright', warm: 'Warm',
-    practice: 'Practice', practiceInLearn: 'Practice in Learn Mode',
+    practice: 'Practice', practiceInLearn: 'Practice in Learn Mode', capture: 'Tape',
+    humanize: 'Humanize', quantize: 'Quantize',
     tuning: 'Tuning / Dastgah', standard12tet: 'Standard (12-TET)'
   },
   fa: {
@@ -91,7 +92,8 @@ const I18N = {
     chords: 'آکوردها', singleNotes: 'تک‌نت', scaleGuide: 'راهنمای گام', allKeys: 'همه کلیدها',
     eqTitle: 'اکولایزر و کروس صوتی', eq: 'اکولایزر', eqBass: 'باس', eqMid: 'میدرنج', eqTreble: 'تریبل',
     chorus: 'کروس', chorusMix: 'شدت کروس', flat: 'تخت', bassBoost: 'تقویت باس', bright: 'شفاف', warm: 'گرم',
-    practice: 'تمرین', practiceInLearn: 'تمرین در حالت آموزش',
+    practice: 'تمرین', practiceInLearn: 'تمرین در حالت آموزش', capture: 'نوار',
+    humanize: 'انسانی‌سازی', quantize: 'کوانتایز',
     tuning: 'کوک / دستگاه', standard12tet: 'استاندارد (۱۲ نیم‌پرده)'
   }
 };

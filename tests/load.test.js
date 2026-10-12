@@ -47,7 +47,7 @@ w.TONORA_INSTRUMENTS = JSON.parse(read('data/instruments.json')).instruments;
 w.TONORA_SONGS = JSON.parse(read('data/songs.json')).songs;
 
 // ---- app scripts, in index.html order ----
-['i18n.js', 'achievements.js', 'audio.js', 'piano.js', 'play.js', 'learn.js',
+['i18n.js', 'store.js', 'achievements.js', 'audio.js', 'piano.js', 'play.js', 'learn.js',
  'backing.js', 'midi.js', 'compose.js', 'theory-content.js', 'notation.js', 'theory.js']
   .forEach(f => inject(read('js/' + f)));
 
