@@ -6,10 +6,12 @@ const PlayMode = {
   piano: null,
   current: 'piano',
   octave: 3,
+  chordMode: '',
+  scaleGuide: '',
   midi: null,        // {access, input}
 
   inst(id) {
-    return window.TONORA_INSTRUMENTS.find(i => i.id === id);
+    return (window.TONORA_INSTRUMENTS || []).find(i => i.id === id);
   },
 
   /* (re)arm the document-level audio revival listeners */
@@ -27,6 +29,23 @@ const PlayMode = {
           <span class="oct-lbl" id="oct-lbl">C${this.octave}–B${this.octave + 1}</span>
           <button class="btn oct-btn" id="oct-up" title="${t('octave')} +">▶</button>
         </div>
+        <select class="btn" id="chord-sel" title="${t('chords')}" style="font-size:0.8rem; padding:0.35rem 0.5rem">
+          <option value="">🎹 ${t('singleNotes')}</option>
+          <option value="maj">Major (ماژور)</option>
+          <option value="min">Minor (مینور)</option>
+          <option value="7">7th (هفت)</option>
+          <option value="sus4">Sus4</option>
+          <option value="maj7">Maj7</option>
+          <option value="min7">Min7</option>
+        </select>
+        <select class="btn" id="scale-sel" title="${t('scaleGuide')}" style="font-size:0.8rem; padding:0.35rem 0.5rem">
+          <option value="">🎼 ${t('allKeys')}</option>
+          <option value="major">Major (C)</option>
+          <option value="minor">Minor (A)</option>
+          <option value="pentatonic">Pentatonic</option>
+          <option value="blues">Blues</option>
+          <option value="shur">Persian Shur</option>
+        </select>
         <button class="btn toggle-btn" id="sustain-btn" title="Space">🦶 ${t('sustain')}</button>
         <button class="btn toggle-btn" id="arp-btn" title="Hold notes to arpeggiate">🎶 Arp</button>
         <button class="btn" id="rec-btn" title="Record live session">⏺ ${t('record')}</button>
@@ -35,7 +54,7 @@ const PlayMode = {
       <div id="play-surface" class="play-surface"></div>
     `;
     const tabs = root.querySelector('#inst-tabs');
-    window.TONORA_INSTRUMENTS.forEach(inst => {
+    (window.TONORA_INSTRUMENTS || []).forEach(inst => {
       const b = document.createElement('button');
       b.className = 'inst-tab';
       b.dataset.id = inst.id;
@@ -49,6 +68,21 @@ const PlayMode = {
     root.querySelector('#oct-up').onclick = () => {
       if (this.octave < 4) { this.octave++; this.updateOctave(); }
     };
+    const chordSel = root.querySelector('#chord-sel');
+    if (chordSel) {
+      chordSel.value = this.chordMode;
+      chordSel.onchange = () => {
+        this.chordMode = chordSel.value;
+      };
+    }
+    const scaleSel = root.querySelector('#scale-sel');
+    if (scaleSel) {
+      scaleSel.value = this.scaleGuide;
+      scaleSel.onchange = () => {
+        this.scaleGuide = scaleSel.value;
+        if (this.piano) this.piano.highlightScale(this.scaleGuide);
+      };
+    }
     const susBtn = root.querySelector('#sustain-btn');
     if (susBtn) {
       susBtn.onclick = () => {
@@ -120,12 +154,16 @@ const PlayMode = {
   },
 
   select(id) {
-    const inst = window.TONORA_INSTRUMENTS.find(i => i.id === id);
+    const inst = this.inst(id) || { id, type: 'synth' };
     this.current = id;
     document.querySelectorAll('.inst-tab').forEach(b => b.classList.toggle('active', b.dataset.id === id));
     const surf = document.getElementById('play-surface');
     const octBox = document.getElementById('octave-box');
     if (octBox) octBox.classList.toggle('hidden', inst.type === 'drumkit');
+    const chordSel = document.getElementById('chord-sel');
+    if (chordSel) chordSel.classList.toggle('hidden', inst.type === 'drumkit');
+    const scaleSel = document.getElementById('scale-sel');
+    if (scaleSel) scaleSel.classList.toggle('hidden', inst.type === 'drumkit');
     const susBtn = document.getElementById('sustain-btn');
     if (susBtn) susBtn.classList.toggle('hidden', inst.type === 'drumkit');
     const arpBtn = document.getElementById('arp-btn');
@@ -165,9 +203,20 @@ const PlayMode = {
       this.piano = new PianoUI(document.getElementById('piano-keys'), {
         octaves: 2,
         startOctave: this.octave,
+        scale: this.scaleGuide,
         onNote: (note) => {
           if (this.arpActive) return;
           const dur = (this.piano && this.piano.sustain) ? 3.0 : 0;
+          if (this.chordMode && window.TonoraTheory && window.TonoraTheory.chordNotes) {
+            const notes = window.TonoraTheory.chordNotes(note, this.chordMode);
+            if (notes && notes.length) {
+              notes.forEach(n => {
+                window.TonoraAudio.playNote(inst, n, dur);
+                if (n !== note && this.piano) this.piano.flash(n);
+              });
+              return;
+            }
+          }
           window.TonoraAudio.playNote(inst, note, dur);
         },
         onSustainChange: (active) => {
@@ -233,6 +282,18 @@ const PlayMode = {
           const el = padEls[padIdx];
           if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 120); }
         } else if (this.piano) {
+          if (this.chordMode && window.TonoraTheory && window.TonoraTheory.chordNotes) {
+            const notes = window.TonoraTheory.chordNotes(name, this.chordMode);
+            if (notes && notes.length) {
+              notes.forEach(n => {
+                window.TonoraAudio.playNote(this.inst(this.current), n, 0, Math.max(0.4, vel / 127));
+                this.piano.press(n);
+                setTimeout(() => this.piano.release(n), 200);
+              });
+              TonoraAchievements.unlock('midi');
+              return;
+            }
+          }
           window.TonoraAudio.playNote(this.inst(this.current), name, 0, Math.max(0.4, vel / 127));
           this.piano.press(name);
           setTimeout(() => this.piano.release(name), 200);

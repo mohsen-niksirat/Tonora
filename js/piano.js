@@ -29,6 +29,7 @@ class PianoUI {
     this.active = new Set();
     this.sustain = false;
     this.sustainedKeys = new Set();
+    this._currentScale = opts.scale || '';
     this.build();
     this._bindPC();
   }
@@ -78,6 +79,7 @@ class PianoUI {
       }
     });
     this._bindTouch();
+    if (this._currentScale) this.highlightScale(this._currentScale);
   }
 
   _bindTouch() {
@@ -194,6 +196,35 @@ class PianoUI {
     if (!el) return;
     el.classList.add('pressed');
     setTimeout(() => el.classList.remove('pressed'), 150);
+  }
+
+  highlightScale(scaleType) {
+    this._currentScale = scaleType || '';
+    const SCALE_DEGREES = {
+      major:      { root: 0, intervals: [0, 2, 4, 5, 7, 9, 11] },
+      minor:      { root: 9, intervals: [9, 11, 0, 2, 4, 5, 7] },
+      pentatonic: { root: 0, intervals: [0, 2, 4, 7, 9] },
+      blues:      { root: 9, intervals: [9, 0, 2, 3, 4, 7] },
+      shur:       { root: 2, intervals: [2, 3, 5, 7, 8, 10, 0] }
+    };
+    const def = SCALE_DEGREES[scaleType];
+    const pitchClasses = def ? new Set(def.intervals) : null;
+    const rootPc = def ? def.root : null;
+    const BASE_PC = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
+
+    for (const note in this.keys) {
+      const el = this.keys[note];
+      if (!pitchClasses) {
+        el.classList.remove('scale-hint', 'scale-root');
+        continue;
+      }
+      const m = /^([A-G]#?)/.exec(note);
+      const pc = m ? BASE_PC[m[1]] : -1;
+      const inScale = pitchClasses.has(pc);
+      const isRoot = pc === rootPc;
+      el.classList.toggle('scale-hint', inScale);
+      el.classList.toggle('scale-root', isRoot);
+    }
   }
 
   setStartOctave(oct) {

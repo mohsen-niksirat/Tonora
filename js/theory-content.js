@@ -19,7 +19,7 @@ const TONAL = getTonal();
 const SEMIS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const BASE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 const INTERVAL_SEMIS = { '1P': 0, '2m': 1, '2M': 2, '3m': 3, '3M': 4, '4P': 5, '5d': 6, '5P': 7, '6m': 8, '6M': 9, '7m': 10, '7M': 11, '8P': 12 };
-const CHORD_IVS = { maj: [0, 4, 7], min: [0, 3, 7], dim: [0, 3, 6], aug: [0, 4, 8], sus4: [0, 5, 7], maj7: [0, 4, 7, 11], min7: [0, 3, 7, 10], dom7: [0, 4, 7, 10] };
+const CHORD_IVS = { maj: [0, 4, 7], min: [0, 3, 7], dim: [0, 3, 6], aug: [0, 4, 8], sus4: [0, 5, 7], maj7: [0, 4, 7, 11], min7: [0, 3, 7, 10], dom7: [0, 4, 7, 10], '7': [0, 4, 7, 10] };
 
 function parsePc(note) {
   const m = /^([A-G][#b]?)(-?\d)$/.exec(note || '');
@@ -60,7 +60,7 @@ function chordNotes(root, quality) {
   if (!p) return [];
   let pcs = null;
   if (TONAL && TONAL.Chord) {
-    const alias = { maj: 'maj', min: 'min', dim: 'dim', aug: 'aug', sus4: 'sus4', maj7: 'maj7', min7: 'm7', dom7: '7' }[quality];
+    const alias = { maj: 'maj', min: 'min', dim: 'dim', aug: 'aug', sus4: 'sus4', maj7: 'maj7', min7: 'm7', dom7: '7', '7': '7' }[quality];
     if (alias) {
       const ch = TONAL.Chord.get(root.replace(/\d/, '') + alias);
       if (ch && ch.notes && ch.notes.length) pcs = ch.notes;

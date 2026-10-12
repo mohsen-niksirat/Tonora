@@ -27,13 +27,15 @@ if (!window.localStorage) {
   };
 }
 
+window.TONORA_INSTRUMENTS = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'instruments.json'), 'utf8')).instruments;
+
 const files = [
   'i18n.js', 'achievements.js', 'audio.js', 'midi.js', 'backing.js', 'theory-content.js',
   'notation.js', 'piano.js', 'play.js', 'learn.js', 'compose.js', 'theory.js'
 ];
 let source = files.map(f => fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8')).join('\n;\n');
 // export a few module objects from the shared script scope for assertions
-source += '\n;window.__test = { ComposeMode, TonoraBacking };';
+source += '\n;window.__test = { ComposeMode, TonoraBacking, PlayMode, PianoUI };';
 
 window.eval(source);
 
@@ -98,6 +100,35 @@ test('theory curriculum and notation wrapper load in the browser', () => {
 test('theory answer-checking works via the browser global', () => {
   const r = window.TonoraTheory.validateAnswer({ type: 'chord', quality: 'maj' }, { root: 'C4' }, ['C4', 'E4', 'G4']);
   assert.strictEqual(r.correct, true);
+});
+
+test('PianoUI highlights scale notes and root', () => {
+  const container = window.document.createElement('div');
+  window.document.body.appendChild(container);
+  const piano = new window.__test.PianoUI(container, { octaves: 2, startOctave: 3 });
+  piano.highlightScale('major');
+  assert.ok(piano.keys['C3'].classList.contains('scale-hint'));
+  assert.ok(piano.keys['C3'].classList.contains('scale-root'));
+  assert.ok(piano.keys['E3'].classList.contains('scale-hint'));
+  assert.ok(!piano.keys['E3'].classList.contains('scale-root'));
+  assert.ok(!piano.keys['C#3'].classList.contains('scale-hint'));
+  piano.highlightScale('');
+  assert.ok(!piano.keys['C3'].classList.contains('scale-hint'));
+});
+
+test('PlayMode plays full chord in chord mode', () => {
+  const root = window.document.createElement('div');
+  window.document.body.appendChild(root);
+  const PM = window.__test.PlayMode;
+  PM.enter(root);
+  PM.chordMode = 'min';
+  const playedNotes = [];
+  const origPlay = window.TonoraAudio.playNote;
+  window.TonoraAudio.playNote = (inst, note) => { playedNotes.push(note); };
+  PM.piano.onNote('A3');
+  window.TonoraAudio.playNote = origPlay;
+  assert.deepStrictEqual(playedNotes, ['A3', 'C4', 'E4']);
+  PM.leave();
 });
 
 if (process.exitCode) {

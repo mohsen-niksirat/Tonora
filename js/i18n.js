@@ -40,7 +40,8 @@ const I18N = {
     playThisNote: 'Read the note and play it on the keyboard',
     playInterval: 'Play the note', above: 'above', playChord: 'Play the chord', playScale: 'Play the scale',
     minor: 'Minor', major: 'Major', hearIt: 'Hear it', skip: 'Skip', correct: 'Correct!', tryAgain: 'Try again',
-    whatDidYouHear: 'What did you hear?', listenAgain: 'Listen again', bestScore: 'Best'
+    whatDidYouHear: 'What did you hear?', listenAgain: 'Listen again', bestScore: 'Best',
+    chords: 'Chords', singleNotes: 'Single', scaleGuide: 'Scale Guide', allKeys: 'All Keys'
   },
   fa: {
     play: 'اجرا', learn: 'آموزش', compose: 'آهنگسازی', theory: 'تئوری',
@@ -80,7 +81,8 @@ const I18N = {
     playThisNote: 'نت را بخوان و روی کیبورد بنواز',
     playInterval: 'نت را بنواز', above: 'بالای', playChord: 'آکورد را بنواز', playScale: 'گام را بنواز',
     minor: 'مینور', major: 'ماژور', hearIt: 'بشنو', skip: 'رد کردن', correct: 'درست است!', tryAgain: 'دوباره تلاش کن',
-    whatDidYouHear: 'چه شنیدی؟', listenAgain: 'دوباره گوش کن', bestScore: 'بهترین'
+    whatDidYouHear: 'چه شنیدی؟', listenAgain: 'دوباره گوش کن', bestScore: 'بهترین',
+    chords: 'آکوردها', singleNotes: 'تک‌نت', scaleGuide: 'راهنمای گام', allKeys: 'همه کلیدها'
   }
 };
 

@@ -100,6 +100,13 @@ main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width
 .key.black .key-label { color: #aaa; bottom: 4px; }
 .pc-hint { display: block; font-size: .52rem; opacity: .75; font-family: monospace; font-weight: 600; margin-top: 1px; }
 .key.black .pc-hint { color: #ccc; }
+.key.scale-hint::after {
+  content: ''; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+  pointer-events: none; opacity: 0.9;
+}
+.key.black.scale-hint::after { bottom: 12px; }
+.key.scale-root::after { background: var(--good); width: 7px; height: 7px; box-shadow: 0 0 6px var(--good); }
 
 .drum-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; padding: 1rem 0; flex: 1; }
 .drum-pad {

@@ -195,6 +195,14 @@ test('noteTranspose accurately handles octave jumps (8P and wrapping)', () => {
   assert.strictEqual(noteTranspose('G4', '6M'), 'E5');
 });
 
+test('chordNotes builds 7th and sus4 chords', () => {
+  const c7 = chordNotes('C4', '7');
+  assert.ok(c7.includes('C4') && c7.includes('E4') && c7.includes('G4'));
+  assert.ok(c7.includes('Bb4') || c7.includes('A#4'));
+  const csus4 = chordNotes('C4', 'sus4');
+  assert.deepStrictEqual(csus4, ['C4', 'F4', 'G4']);
+});
+
 test('buildMidiFile honors muted and solo track states', () => {
   const tracks = {
     melody: ['C4', null],
