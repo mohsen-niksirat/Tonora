@@ -977,7 +977,11 @@ async function renderCompositionToWav(tracks, bpm, steps, swing) {
   delay.connect(delayOut); delayOut.connect(master); delayOut.connect(reverb);
   const eng = window.TonoraAudio;
   const inst = id => window.TONORA_INSTRUMENTS.find(i => i.id === id);
-  const vel = (tracks.velocity !== undefined) ? tracks.velocity : 0.8;
+  const baseVel = (tracks.velocity !== undefined) ? tracks.velocity : 0.8;
+  const stepVel = (s) => {
+    const v = tracks.stepVel && tracks.stepVel[s];
+    return (v && v > 0) ? v : baseVel;
+  };
 
   // offline buses mirroring the live mixer (gain + pan), so the render
   // reflects the same volume/pan settings the user hears in the app
@@ -1010,6 +1014,7 @@ async function renderCompositionToWav(tracks, bpm, steps, swing) {
     if (swing) dur *= (s % 2 === 0) ? 1.33 : 0.67;
     currentWhen += dur;
 
+    const vel = stepVel(s);
     const mel = tracks.melody[s];
     if (mel && audible('melody')) {
       const notesArr = Array.isArray(mel) ? mel : [mel];

@@ -82,10 +82,19 @@ const ComposeMode = {
           </optgroup>
         </select>
         <button class="btn" id="cmp-dup" title="${t('duplicate')}">⧉</button>
+        <select class="btn" id="cmp-groove" title="Groove presets" style="font-size:0.8rem; padding:0.35rem 0.5rem">
+          <option value="">🕺 Groove</option>
+          <option value="straight">Straight</option>
+          <option value="shuffle">Shuffle</option>
+          <option value="deep-swing">Deep Swing</option>
+          <option value="loose">Loose / Human</option>
+          <option value="tight">Tight / Machine</option>
+        </select>
         <button class="btn toggle" id="cmp-swing" title="Swing Rhythm">🎵 Swing</button>
         <button class="btn toggle" id="cmp-countin" title="Count-in before recording">🥁 ${t('countIn')}</button>
         <button class="btn toggle" id="cmp-metro" title="Metronome while playing">🎚️ ${t('metro')}</button>
         <label title="Humanize (timing variation)">🤹 <input type="range" id="cmp-human" min="0" max="60" step="5" value="${this.humanize || 0}" style="width:6em"></label>
+        <button class="btn toggle" id="cmp-vellane" title="Velocity lane">📊 VEL</button>
         <button class="btn" id="cmp-mixer-btn">🎚️ Mixer</button>
         <button class="btn toggle" id="mute-mel" title="Mute melody">🎹 ${t('melody')}</button>
         <button class="btn toggle" id="mute-drm" title="Mute drums">🥁 ${t('drums')}</button>
@@ -174,6 +183,15 @@ const ComposeMode = {
       humanSlider.value = this.humanize || 0;
       humanSlider.oninput = e => this.setHumanize(+e.target.value);
     }
+    const velBtn = root.querySelector('#cmp-vellane');
+    if (this.showVelLane) velBtn.classList.add('active');
+    velBtn.onclick = () => {
+      this.showVelLane = !this.showVelLane;
+      velBtn.classList.toggle('active', this.showVelLane);
+      this.buildRoll();
+    };
+    const grooveSel = root.querySelector('#cmp-groove');
+    if (grooveSel) grooveSel.onchange = e => { if (e.target.value) { this.applyGroove(e.target.value); e.target.value = ''; } };
     root.querySelector('#cmp-presets').onchange = e => {
       if (e.target.value) { this.loadPreset(e.target.value); e.target.value = ''; }
     };
@@ -591,7 +609,11 @@ const ComposeMode = {
       d = { kick, snare, hat };
     }
     const mix = tr.mixer || { melody: { vol: 1, pan: 0 }, bass: { vol: 1, pan: 0 }, drums: { vol: 1, pan: 0 } };
-    return { melody: fix(tr.melody), drums: d, bass: fix(tr.bass), mixer: mix, velocity: tr.velocity };
+    const stepVel = new Array(this.steps).fill(0);
+    if (Array.isArray(tr.stepVel)) {
+      for (let s = 0; s < Math.min(this.steps, tr.stepVel.length); s++) stepVel[s] = tr.stepVel[s] || 0;
+    }
+    return { melody: fix(tr.melody), drums: d, bass: fix(tr.bass), mixer: mix, velocity: tr.velocity, stepVel };
   },
 
   resizeTracks() {
@@ -606,6 +628,7 @@ const ComposeMode = {
       this.tracks.drums.snare = r(this.tracks.drums.snare || [], false);
       this.tracks.drums.hat = r(this.tracks.drums.hat || [], false);
     }
+    this.tracks.stepVel = r(this.tracks.stepVel || [], 0);
   },
 
   buildRoll() {
@@ -659,6 +682,33 @@ const ComposeMode = {
         mkCell('bass', this.stepHas(v, n), (cell) => this.toggleNote('bass', s, n, 'synth', 0.3, cell), s));
       mkRow(n, cells);
     });
+    // velocity lane — per-step accent (click cycles 0 → 0.5 → 0.7 → 0.85 → 1.0)
+    if (this.showVelLane) {
+      const steps_ = [0, 0.5, 0.7, 0.85, 1.0];
+      const vCells = (this.tracks.stepVel || []).map((v, s) => {
+        const c = document.createElement('button');
+        const groupCls = Math.floor(s / 4) % 2 === 0 ? 'g1' : 'g2';
+        c.className = `roll-cell vel ${groupCls} ${v > 0 ? 'on' : ''}`;
+        c.dataset.vel = v;
+        c.title = `${t('velocity')}: ${v || '-'}`;
+        const bar = document.createElement('span');
+        bar.className = 'vel-bar';
+        bar.style.height = v > 0 ? Math.round(v * 100) + '%' : '4%';
+        c.appendChild(bar);
+        c.onclick = () => {
+          this.snapshot();
+          const idx = steps_.indexOf(v);
+          const nv = steps_[(idx + 1) % steps_.length];
+          this.tracks.stepVel[s] = nv;
+          c.dataset.vel = nv;
+          c.title = `${t('velocity')}: ${nv || '-'}`;
+          c.classList.toggle('on', nv > 0);
+          bar.style.height = nv > 0 ? Math.round(nv * 100) + '%' : '4%';
+        };
+        return c;
+      });
+      mkRow('VEL', vCells);
+    }
   },
 
   stepHas(v, n) {
@@ -770,7 +820,8 @@ const ComposeMode = {
   },
 
   playStep(s) {
-    const vel = this.velocity;
+    const stepV = (this.tracks.stepVel && this.tracks.stepVel[s]) || 0;
+    const vel = stepV > 0 ? stepV : this.velocity;
     const soloed = this.solo && Object.values(this.solo).some(Boolean);
     const audible = (track) => soloed ? !!this.solo[track] : !(this.muted && this.muted[track]);
     // humanize: random ±ms offset per step for a less robotic feel
@@ -1015,6 +1066,25 @@ const ComposeMode = {
   /* nudge every note by ±humanize ms (kept per-step) */
   setHumanize(v) {
     this.humanize = Math.max(0, Math.min(60, +v || 0));
+    const humanSlider = document.getElementById('cmp-human');
+    if (humanSlider) humanSlider.value = this.humanize;
+  },
+
+  /* groove presets: combine swing strength + humanize into a feel */
+  applyGroove(key) {
+    const G = {
+      'straight': { swing: false, human: 0 },
+      'shuffle': { swing: true, human: 5 },
+      'deep-swing': { swing: true, human: 12 },
+      'loose': { swing: false, human: 35 },
+      'tight': { swing: false, human: 0 }
+    };
+    const g = G[key];
+    if (!g) return;
+    this.swing = g.swing;
+    const swingBtn = document.getElementById('cmp-swing');
+    if (swingBtn) swingBtn.classList.toggle('active', this.swing);
+    this.setHumanize(g.human);
   },
 
   /* quantize melody + bass note positions to a 16th grid (no-op placeholder: live

@@ -365,6 +365,51 @@ test('ComposeMode setHumanize clamps the range', () => {
   CM.setHumanize(25); assert.strictEqual(CM.humanize, 25);
 });
 
+test('normalizeTracks creates a stepVel lane and resizeTracks keeps it in sync', () => {
+  const CM = window.__test.ComposeMode;
+  CM.steps = 8;
+  const t = CM.normalizeTracks({ melody: [], bass: [], drums: {}, velocity: 0.8, stepVel: [0, 0.5, 0, 0.85] });
+  assert.ok(Array.isArray(t.stepVel), 'stepVel missing');
+  assert.strictEqual(t.stepVel[1], 0.5);
+  assert.strictEqual(t.stepVel[3], 0.85);
+  assert.strictEqual(t.stepVel[7], 0, 'should zero-fill');
+  // resize to 16
+  CM.tracks = t; CM.steps = 16;
+  CM.resizeTracks();
+  assert.strictEqual(CM.tracks.stepVel.length, 16);
+  assert.strictEqual(CM.tracks.stepVel[15], 0);
+});
+
+test('playStep prefers per-step velocity over global', () => {
+  const CM = window.__test.ComposeMode;
+  CM.steps = 4;
+  CM.velocity = 0.6;
+  CM.tracks = CM.normalizeTracks({
+    melody: ['C4', 'E4'], bass: [], drums: {},
+    stepVel: [0.95, 0, 0, 0], velocity: 0.6
+  });
+  CM.muted = { melody: false, drums: false, bass: false };
+  CM.solo = { melody: false, drums: false, bass: false };
+  let played = null;
+  const orig = window.TonoraAudio.playNote;
+  window.TonoraAudio.playNote = (inst, n, d, v) => { played = v; return { stop() {} }; };
+  CM.playStep(0);
+  assert.strictEqual(played, 0.95, 'stepVel not used');
+  CM.playStep(1);
+  assert.strictEqual(played, 0.6, 'global velocity not used');
+  window.TonoraAudio.playNote = orig;
+});
+
+test('applyGroove sets swing and humanize together', () => {
+  const CM = window.__test.ComposeMode;
+  CM.applyGroove('deep-swing');
+  assert.strictEqual(CM.swing, true);
+  assert.strictEqual(CM.humanize, 12);
+  CM.applyGroove('tight');
+  assert.strictEqual(CM.swing, false);
+  assert.strictEqual(CM.humanize, 0);
+});
+
 if (process.exitCode) {
   console.error(`\n${passed} passed, some failed.`);
 } else {

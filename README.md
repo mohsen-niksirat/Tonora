@@ -23,6 +23,19 @@ Tonora is a client-side music studio: play virtual instruments, learn famous son
 
 ## Changelog
 
+### v7.0 (The Studio Update) — Offline PWA, Capture, Share & Groove
+- 🌐 **Fully Offline PWA** — abcjs and tonal now ship as local vendor bundles, so Theory and notation work with no internet. Everything is in the service-worker cache.
+- 🎙️ **Play → Compose Capture** — the new ● Tape button in Play mode records your live performance with timing and drops it quantized into the sequencer as an editable pattern.
+- 📊 **Velocity Lane** — a per-step accent lane in Compose (toggle 📊 VEL) that drives live playback, WAV export, and MIDI export — real dynamics, not just a global slider.
+- 🕺 **Groove Presets** — one-click feels (Straight, Shuffle, Deep Swing, Loose, Tight) that combine swing and humanize timing.
+- 🔗 **Share via URL** — the 🔗 button copies a `#compose?s=…` link that encodes your whole song in the URL. Anyone who opens it gets your composition — no server needed.
+- ⏸️ **Wait Mode (Synthesia-style)** — in Learn mode the timeline freezes at the next note until you play it; perfect for hands-on practice.
+- 🎯 **Daily Challenge** — a date-seeded daily song card in Learn with a done state, plus a local streak feel.
+- 🎵 **5 Drum Groove Presets** — Rock, Hip-Hop, Four-on-the-Floor, Persian 6/8, and Rap/Trap rhythm patterns.
+- 🎹 **21 Songs** — 10 new lessons including 4 Iranian classics (Morgh-e Sahar, Ey Iran, Sultane Ghalbha, Jane Maryam) and 6 more classical pieces.
+- 📦 **IndexedDB Projects** — compositions now store in IndexedDB with automatic migration from localStorage (with a safe fallback).
+- 🛠️ **`npm run bump`** — a version-bump script updates every `?v=` cache-buster and the service-worker cache name in one step.
+
 ### v6.0 (The Masterpiece Update) — Arpeggiator, Neon Glow & Delay FX
 - 🎶 **Arpeggiator** — added an Arp button in Play mode. Hold down a chord and watch the arpeggiator cycle through the notes automatically (perfect for synthwave).
 - 🔁 **Global Delay FX** — introduced a ping-pong Delay slider to the master effects rack (works in both live play and WAV export).

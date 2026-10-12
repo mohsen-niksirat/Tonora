@@ -36,7 +36,11 @@ function buildMidiFile(tracks, bpm, steps, swing) {
   push(0, [0xC0, 0], PRIO.meta);   // ch0 melody → acoustic grand
   push(0, [0xC1, 38], PRIO.meta);  // ch1 bass → synth bass 1
 
-  const vel = Math.max(1, Math.min(127, Math.round((tracks.velocity !== undefined ? tracks.velocity : 0.8) * 127)));
+  const baseVel = Math.max(1, Math.min(127, Math.round((tracks.velocity !== undefined ? tracks.velocity : 0.8) * 127)));
+  const stepVel = (s) => {
+    const v = tracks.stepVel && tracks.stepVel[s];
+    return (v && v > 0) ? Math.max(1, Math.min(127, Math.round(v * 127))) : baseVel;
+  };
 
   const soloed = tracks.solo && Object.values(tracks.solo).some(Boolean);
   const audible = (track) => soloed ? !!tracks.solo[track] : !(tracks.muted && tracks.muted[track]);
@@ -47,6 +51,7 @@ function buildMidiFile(tracks, bpm, steps, swing) {
     if (swing) dur *= (s % 2 === 0) ? 1.33 : 0.67;
     const start = cursor;
     cursor += dur;
+    const vel = stepVel(s);
 
     const mel = tracks.melody && tracks.melody[s];
     if (mel && audible('melody')) {

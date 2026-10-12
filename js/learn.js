@@ -35,6 +35,18 @@ const LearnMode = {
       </div>
     `;
     const list = root.querySelector('#songs');
+    // Daily Challenge: deterministic pick by date
+    const today = new Date();
+    const dayIdx = (today.getFullYear() * 366 + today.getMonth() * 31 + today.getDate()) % window.TONORA_SONGS.length;
+    const dailySong = window.TONORA_SONGS[dayIdx];
+    const doneKey = 'tonora-daily-' + today.toISOString().slice(0, 10);
+    const dailyDone = localStorage.getItem(doneKey) === dailySong.id;
+    const dailyCard = document.createElement('button');
+    dailyCard.className = 'song-card daily-challenge' + (dailyDone ? ' done' : '');
+    dailyCard.innerHTML = `<strong>🎯 ${dailySong.title[getLang()] || dailySong.title.en}</strong>
+      <small>${dailyDone ? '✅ ' : ''}Daily · ${dailySong.composer} · ${'★'.repeat(dailySong.difficulty)}</small>`;
+    dailyCard.onclick = () => this.start(dailySong);
+    list.appendChild(dailyCard);
     window.TONORA_SONGS.forEach(song => {
       const card = document.createElement('button');
       card.className = 'song-card';
@@ -329,6 +341,12 @@ const LearnMode = {
         this.setStatus(`🎉 ${t('score')}: ${this.score}`);
         this.phase = 'done';
         TonoraAchievements.unlock('first_song');
+        // mark daily challenge done if this was today's song
+        const today = new Date();
+        const dayIdx = (today.getFullYear() * 366 + today.getMonth() * 31 + today.getDate()) % window.TONORA_SONGS.length;
+        if (window.TONORA_SONGS[dayIdx] && window.TONORA_SONGS[dayIdx].id === this.song.id) {
+          localStorage.setItem('tonora-daily-' + today.toISOString().slice(0, 10), this.song.id);
+        }
         this.showSummaryModal();
       }
     }
