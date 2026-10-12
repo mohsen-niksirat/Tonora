@@ -1,6 +1,6 @@
 {
   "name": "tonora",
-  "version": "7.1.0",
+  "version": "7.2.0",
   "description": "Play, Learn, Compose music in browser.",
   "private": true,
   "scripts": {

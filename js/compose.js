@@ -82,6 +82,14 @@ const ComposeMode = {
           </optgroup>
         </select>
         <button class="btn" id="cmp-dup" title="${t('duplicate')}">⧉</button>
+        <select class="btn" id="cmp-transpose" title="Transpose" style="font-size:0.8rem; padding:0.35rem 0.5rem; width:auto">
+          <option value="">♯♭</option>
+          <option value="-12">-12</option><option value="-7">-7</option><option value="-5">-5</option>
+          <option value="-4">-4</option><option value="-3">-3</option><option value="-2">-2</option>
+          <option value="-1">-1</option><option value="1">+1</option><option value="2">+2</option>
+          <option value="3">+3</option><option value="4">+4</option><option value="5">+5</option>
+          <option value="7">+7</option><option value="12">+12</option>
+        </select>
         <select class="btn" id="cmp-groove" title="Groove presets" style="font-size:0.8rem; padding:0.35rem 0.5rem">
           <option value="">🕺 Groove</option>
           <option value="straight">Straight</option>
@@ -144,13 +152,35 @@ const ComposeMode = {
       };
     }
     if (this._onKey) document.removeEventListener('keydown', this._onKey);
+    this._prSelected = new Set();
     this._onKey = (e) => {
       const tag = (e.target && e.target.tagName) || '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      if (!(e.ctrlKey || e.metaKey)) return;
+      if (!(e.ctrlKey || e.metaKey)) {
+        if ((e.key === 'Delete' || e.key === 'Backspace') && this.pianoRollView && this._prSelected && this._prSelected.size) {
+          e.preventDefault();
+          this._prDeleteSelected();
+        }
+        return;
+      }
       const k = e.key.toLowerCase();
       if (k === 'z' && !e.shiftKey) { e.preventDefault(); this.undo(); }
       else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); this.redo(); }
+      else if (k === 'c' && this.pianoRollView) {
+        if (this._prCopySelected()) {
+          e.preventDefault();
+          const b = document.getElementById('cmp-prview');
+          if (b) { const t = b.textContent; b.textContent = '✓'; setTimeout(() => { if (b.isConnected) b.textContent = t; }, 800); }
+        }
+      }
+      else if (k === 'v' && this.pianoRollView) {
+        e.preventDefault();
+        // paste after the rightmost selected/pasted section if known, else at the playhead
+        const sel = this._prSelected && this._prSelected.size
+          ? Math.max(...[...this._prSelected].map(k => +k.split(':')[2])) + 1
+          : Math.min(this.steps - 1, this.step + 1);
+        this._prPaste(sel);
+      }
     };
     document.addEventListener('keydown', this._onKey);
     root.querySelector('#cmp-bpm').onchange = e => {
@@ -215,6 +245,10 @@ const ComposeMode = {
       if (e.target.value) { this.loadPreset(e.target.value); e.target.value = ''; }
     };
     root.querySelector('#cmp-dup').onclick = () => this.duplicatePattern();
+    const transSel = root.querySelector('#cmp-transpose');
+    if (transSel) transSel.onchange = e => {
+      if (e.target.value !== '') { this.transposeBy(+e.target.value); e.target.value = ''; }
+    };
     const wireMute = (id, key) => {
       const b = root.querySelector('#' + id);
       b.onclick = () => {
@@ -897,13 +931,20 @@ const ComposeMode = {
   },
 
   _wireNoteBlock(el, track, instId) {
-    // drag the right edge to stretch 1..8 steps
+    // drag the right edge to stretch 1–8 steps; ctrl/shift-click = multi-select
     let drag = null;
     el.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
+      const key = track + ':' + el.dataset.note + ':' + el.dataset.step;
+      if (e.ctrlKey || e.metaKey || e.shiftKey) {
+        e.preventDefault();
+        this._prToggleSelect(el, key);
+        return;
+      }
       if (e.button === 2) {
         e.preventDefault();
-        this._prEraseBlock(el);
+        if (this._prSelected && this._prSelected.has(key)) this._prDeleteSelected();
+        else this._prEraseBlock(el);
         return;
       }
       const rect = el.getBoundingClientRect();
@@ -950,7 +991,84 @@ const ComposeMode = {
     } else {
       arr[s] = null;
     }
+    if (this._prSelected) this._prSelected.delete(el.dataset.note + ':' + s);
     this.buildPianoRoll();
+  },
+
+  /* ---- multi-select + copy/paste on the piano-roll ---- */
+  _prToggleSelect(el, key) {
+    this._prSelected = this._prSelected || new Set();
+    if (this._prSelected.has(key)) { this._prSelected.delete(key); el.classList.remove('sel'); }
+    else { this._prSelected.add(key); el.classList.add('sel'); }
+  },
+
+  _prSelectedHits() {
+    const out = [];
+    if (!this._prSelected) return out;
+    this._prSelected.forEach(key => {
+      const [track, note, s] = key.split(':');
+      const step = +s;
+      const cell = this.tracks[track] && this.tracks[track][step];
+      if (!cell) return;
+      this._cellHits(cell, step, track).forEach(h => { if (h.n === note) out.push({ n: h.n, s: step, track, len: h.len }); });
+    });
+    return out;
+  },
+
+  _prDeleteSelected() {
+    const sel = this._prSelectedHits();
+    if (!sel.length) return;
+    this.snapshot();
+    sel.forEach(h => {
+      const arr = this.tracks[h.track];
+      const cell = arr[h.s];
+      if (Array.isArray(cell)) {
+        const i = cell.findIndex(x => (x && typeof x === 'object' ? x.n : x) === h.n);
+        if (i >= 0) cell.splice(i, 1);
+        if (!cell.length) arr[h.s] = null;
+      } else if ((cell && typeof cell === 'object' ? cell.n : cell) === h.n) {
+        arr[h.s] = null;
+      }
+    });
+    this._prSelected = new Set();
+    this._render();
+  },
+
+  _prCopySelected() {
+    const sel = this._prSelectedHits();
+    if (!sel.length) return false;
+    const minS = Math.min(...sel.map(h => h.s));
+    this._prClipboard = sel.map(h => ({ n: h.n, ds: h.s - minS, track: h.track, len: h.len }));
+    return true;
+  },
+
+  _prPaste(offsetSteps) {
+    const clip = this._prClipboard;
+    if (!clip || !clip.length) return;
+    const base = (offsetSteps !== undefined) ? offsetSteps : Math.min(...clip.map(h => h.ds)) + 2;
+    this.snapshot();
+    clip.forEach(h => {
+      const s = Math.min(this.steps - 1, base + h.ds);
+      const arr = this.tracks[h.track];
+      const cur = arr[s];
+      const set = (cell) => {
+        if (cell === null) arr[s] = h.n;
+        else if (typeof cell === 'string') { if (cell !== h.n) arr[s] = [cell, h.n]; }
+        else if (Array.isArray(cell)) { if (!cell.some(x => (x && typeof x === 'object' ? x.n : x) === h.n)) cell.push(h.n); }
+      };
+      set(cur);
+      if (this.tracks.noteLen && this.tracks.noteLen[h.track]) this.tracks.noteLen[h.track][s] = h.len;
+    });
+    this._prSelected = new Set(clip.map(h => h.track + ':' + h.n + ':' + Math.min(this.steps - 1, base + h.ds)));
+    this._render();
+    // re-mark the pasted notes as selected
+    if (typeof document !== 'undefined') {
+      this._prSelected.forEach(key => {
+        const [track, note, s] = key.split(':');
+        const el = document.querySelector(`.pr-note.${track}[data-note="${note}"][data-step="${s}"]`);
+        if (el) el.classList.add('sel');
+      });
+    }
   },
 
   toggleNote(track, s, n, instId, previewDur, cell) {
@@ -1397,6 +1515,43 @@ const ComposeMode = {
       this.updateDuration();
     }
     return true;
+  },
+
+  /* shift every melody+bass note by `semis` semitones (-12..+12) */
+  transposeBy(semis) {
+    if (!semis) return;
+    this.snapshot();
+    const SHARP = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+    const FLAT  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+    const PC = { C:0,'C#':1,Db:1,D:2,'D#':3,Eb:3,E:4,F:5,'F#':6,Gb:6,G:7,'G#':8,Ab:8,A:9,'A#':10,Bb:10,B:11 };
+    const transNote = (n) => {
+      const m = /^([A-G][#b]?)(-?\d+)$/.exec(n);
+      if (!m) return n;
+      const pc = PC[m[1]];
+      if (pc === undefined) return n;
+      const midi = pc + (parseInt(m[2], 10) + 1) * 12 + semis;
+      if (midi < 0 || midi > 127) return n;
+      const names = semis > 0 ? SHARP : FLAT;
+      return names[midi % 12] + (Math.floor(midi / 12) - 1);
+    };
+    const mapCell = (cell) => {
+      if (!cell) return cell;
+      if (typeof cell === 'string') return transNote(cell);
+      if (cell && typeof cell === 'object' && !Array.isArray(cell)) {
+        return { ...cell, n: transNote(cell.n) };
+      }
+      if (Array.isArray(cell)) return cell.map(x => (x && typeof x === 'object') ? { ...x, n: transNote(x.n) } : transNote(x));
+      return cell;
+    };
+    this.tracks.melody = (this.tracks.melody || []).map(mapCell);
+    this.tracks.bass = (this.tracks.bass || []).map(mapCell);
+    this._render();
+  },
+
+  /* rebuild the visible roll only when the editor is in the DOM (safe for tests) */
+  _render() {
+    if (typeof document === 'undefined') return;
+    if (document.getElementById('roll')) this.buildRoll();
   },
 
   /* nudge every note by ±humanize ms (kept per-step) */

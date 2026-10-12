@@ -23,6 +23,10 @@ Tonora is a client-side music studio: play virtual instruments, learn famous son
 
 ## Changelog
 
+### v7.2 (The Power Tools Update) — Transpose & Multi-select Copy/Paste
+- ♯♭ **Project Transpose** — shift every melody and bass note by −12 to +12 semitones from the ♯♭ menu (naturals use sharps going up, flats going down; notes that would leave the MIDI range are kept safe). Fully undoable.
+- 📋 **Multi-select Copy/Paste in Piano-roll** — Ctrl/Cmd-click or Shift-click notes to select several at once, `Ctrl+C` / `Ctrl+V` to duplicate them, `Delete` to clear the selection. Pasted notes keep their lengths and are pre-selected for quick moves.
+
 ### v7.1 (The Pro Edit Update) — Piano-roll, Pattern Chaining & Practice Insights
 - 🎼 **True Piano-roll** — toggle 🎼 Roll in Compose for a chromatic C3–B5 editor: click to place a note, drag its right edge to stretch the length (1–8 steps), right-click to erase. Note lengths persist through undo, save, share, and MIDI/WAV export.
 - ⛓ **Pattern Chaining** — snapshot the current pattern as named sections (S1, S2, …) in the ⛓ panel, then play them back-to-back with Chain mode on. Great for verse/chorus structures. Sections are saved inside projects.

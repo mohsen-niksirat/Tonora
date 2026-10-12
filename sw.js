@@ -1,14 +1,14 @@
 /* Tonora service worker — offline-first */
-const CACHE = 'tonora-v28';
+const CACHE = 'tonora-v29';
 const ASSETS = [
   './', './index.html', './manifest.json',
-  './css/style.css?v=28',
-  './js/i18n.js?v=28', './js/store.js?v=28', './js/achievements.js?v=28', './js/audio.js?v=28', './js/piano.js?v=28',
-  './js/play.js?v=28', './js/learn.js?v=28', './js/compose.js?v=28', './js/theory.js?v=28',
-  './js/midi.js?v=28', './js/backing.js?v=28', './js/theory-content.js?v=28', './js/notation.js?v=28',
-  './js/vendor/abcjs-basic-min.js?v=28', './js/vendor/tonal.min.js?v=28',
-  './js/store.js?v=28', './js/share.js?v=28',
-  './data/instruments.json?v=28', './data/songs.json?v=28',
+  './css/style.css?v=29',
+  './js/i18n.js?v=29', './js/store.js?v=29', './js/achievements.js?v=29', './js/audio.js?v=29', './js/piano.js?v=29',
+  './js/play.js?v=29', './js/learn.js?v=29', './js/compose.js?v=29', './js/theory.js?v=29',
+  './js/midi.js?v=29', './js/backing.js?v=29', './js/theory-content.js?v=29', './js/notation.js?v=29',
+  './js/vendor/abcjs-basic-min.js?v=29', './js/vendor/tonal.min.js?v=29',
+  './js/store.js?v=29', './js/share.js?v=29',
+  './data/instruments.json?v=29', './data/songs.json?v=29',
   './icons/icon-192.png', './icons/icon-512.png'
 ];
 self.addEventListener('install', e => {

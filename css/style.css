@@ -291,6 +291,7 @@ main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width
 .pr-note { position: absolute; top: 2px; height: 18px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; line-height: 18px; text-align: center; overflow: hidden; cursor: ew-resize; z-index: 2; user-select: none; touch-action: none; }
 .pr-note.melody { background: var(--accent); color: #fff; }
 .pr-note.bass { background: var(--accent2); color: #08131f; }
+.pr-note.sel { outline: 2px solid #f1c40f; outline-offset: -2px; box-shadow: 0 0 10px rgba(241,196,15,0.6); }
 .pr-note::after { content: ''; position: absolute; inset-inline-end: 0; top: 0; width: 10px; height: 100%; cursor: ew-resize; background: rgba(255,255,255,0.25); border-radius: 0 4px 4px 0; }
 .roll-cell.vel.on { background: rgba(241,196,15,0.12); }
 .roll-cell.cur { box-shadow: inset 0 0 0 2px #fff; }

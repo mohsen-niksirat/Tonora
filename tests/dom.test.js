@@ -443,6 +443,50 @@ test('pattern chain: add, load and remove sections', () => {
   assert.strictEqual(CM.sections[0].name, 'S1', 'names should renumber');
 });
 
+test('transposeBy shifts melody and bass by semitones with enharmonics', () => {
+  const CM = window.__test.ComposeMode;
+  CM.steps = 4;
+  CM.tracks = CM.normalizeTracks({ melody: ['C4', 'E4', 'F#4'], bass: ['C3', 'A2', 'G2'], drums: {} });
+  CM.transposeBy(3);
+  assert.strictEqual(CM.tracks.melody[0], 'D#4');
+  assert.strictEqual(CM.tracks.melody[1], 'G4');
+  assert.strictEqual(CM.tracks.melody[2], 'A4');
+  assert.strictEqual(CM.tracks.bass[0], 'D#3');
+  assert.strictEqual(CM.tracks.bass[1], 'C3');
+  CM.transposeBy(-3);
+  assert.strictEqual(CM.tracks.melody[0], 'C4');
+  assert.strictEqual(CM.tracks.bass[0], 'C3');
+});
+
+test('transposeBy is safe on empty cells and out-of-range notes', () => {
+  const CM = window.__test.ComposeMode;
+  CM.steps = 4;
+  CM.tracks = CM.normalizeTracks({ melody: [null, 'C4', 'G9'], bass: [null], drums: {} });
+  CM.transposeBy(12); // G9 (127) + 12 would overflow → kept as-is
+  assert.strictEqual(CM.tracks.melody[1], 'C5');
+  assert.strictEqual(CM.tracks.melody[2], 'G9');
+  assert.strictEqual(CM.tracks.melody[0], null);
+  CM.transposeBy(-12);
+  assert.strictEqual(CM.tracks.melody[1], 'C4');
+  assert.strictEqual(CM.tracks.melody[2], 'G8');
+});
+
+test('piano-roll copy/paste duplicates selected notes at an offset', () => {
+  const CM = window.__test.ComposeMode;
+  CM.steps = 16;
+  CM.pianoRollView = true;
+  const mel = new Array(16).fill(null); mel[0] = 'C4'; mel[1] = 'E4';
+  const nl = new Array(16).fill(2); nl[0] = 4;
+  CM.tracks = CM.normalizeTracks({ melody: mel, bass: [], drums: {}, noteLen: { melody: nl, bass: [] } });
+  // fake selection (as if the user ctrl-clicked both notes)
+  CM._prSelected = new Set(['melody:C4:0', 'melody:E4:1']);
+  assert.ok(CM._prCopySelected(), 'copy failed');
+  CM._prPaste(4); // paste at step 4
+  assert.strictEqual(CM.tracks.melody[4], 'C4');
+  assert.strictEqual(CM.tracks.melody[5], 'E4');
+  assert.strictEqual(CM.tracks.noteLen.melody[4], 4, 'note length not carried');
+});
+
 if (process.exitCode) {
   console.error(`\n${passed} passed, some failed.`);
 } else {
