@@ -52,23 +52,35 @@ function buildMidiFile(tracks, bpm, steps, swing) {
     const start = cursor;
     cursor += dur;
     const vel = stepVel(s);
+    const lenOf = (track) => {
+      const a = tracks.noteLen && tracks.noteLen[track];
+      const v = a && a[s];
+      return (v && v > 0) ? Math.min(8, v) : 2;
+    };
+    const hits = (cell) => {
+      if (!cell) return [];
+      if (typeof cell === 'string') return [cell];
+      if (cell && typeof cell === 'object' && !Array.isArray(cell)) return [cell.n].filter(Boolean);
+      if (Array.isArray(cell)) return cell.map(x => (x && typeof x === 'object') ? x.n : x).filter(Boolean);
+      return [];
+    };
 
     const mel = tracks.melody && tracks.melody[s];
     if (mel && audible('melody')) {
-      (Array.isArray(mel) ? mel : [mel]).forEach(n => {
+      hits(mel).forEach(n => {
         const nn = noteNameToMidi(n);
         if (nn == null) return;
         push(start, [0x90, nn, vel], PRIO.on);
-        push(start + Math.round(dur * 2), [0x80, nn, 0], PRIO.off);
+        push(start + Math.round(dur * lenOf('melody')), [0x80, nn, 0], PRIO.off);
       });
     }
     const bass = tracks.bass && tracks.bass[s];
     if (bass && audible('bass')) {
-      (Array.isArray(bass) ? bass : [bass]).forEach(n => {
+      hits(bass).forEach(n => {
         const nn = noteNameToMidi(n);
         if (nn == null) return;
         push(start, [0x91, nn, vel], PRIO.on);
-        push(start + Math.round(dur * 3), [0x81, nn, 0], PRIO.off);
+        push(start + Math.round(dur * lenOf('bass')), [0x81, nn, 0], PRIO.off);
       });
     }
     const d = tracks.drums;

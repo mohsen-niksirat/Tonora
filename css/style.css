@@ -213,6 +213,14 @@ main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width
 #songs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .6rem; }
 .song-card.daily-challenge { border: 2px solid var(--accent); background: linear-gradient(135deg, rgba(108,140,255,0.12), rgba(160,80,255,0.08)); }
 .song-card.daily-challenge.done { border-color: #2ecc71; opacity: 0.75; }
+/* practice insights */
+.insights { margin: 0.75rem 0; text-align: start; }
+.insights h4 { margin: 0 0 0.4rem; font-size: 0.9rem; }
+.bar-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; margin-bottom: 0.25rem; }
+.bar-row span:first-child { min-width: 3.2em; }
+.bar-row span:last-child { min-width: 2.6em; text-align: end; }
+.bar-track { flex: 1; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
 .song-card {
   background: var(--card); border: 1px solid rgba(255,255,255,.08); color: var(--text);
   border-radius: .9rem; padding: .8rem; cursor: pointer; font: inherit; text-align: start;
@@ -272,6 +280,18 @@ main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width
 .roll-cell.bass.on { background: var(--accent2); }
 .roll-cell.vel { display: flex; align-items: flex-end; justify-content: center; padding: 2px; }
 .roll-cell.vel .vel-bar { display: block; width: 70%; background: linear-gradient(180deg, #f1c40f, #e67e22); border-radius: 2px; min-height: 2px; }
+/* chromatic piano-roll */
+:root { --pr-lab: 56px; --pr-cell: 30px; }
+.roll-row.pr-row { position: relative; min-height: 22px; }
+.roll-row.pr-row.pr-black { background: rgba(255,255,255,0.025); }
+.roll-label.pr-label { min-width: var(--pr-lab); font-size: 0.68rem; opacity: 0.85; }
+.pr-cell { display: inline-block; width: var(--pr-cell); height: 22px; border-inline-start: 1px solid rgba(255,255,255,0.05); box-sizing: border-box; cursor: cell; }
+.pr-cell.black { background: rgba(0,0,0,0.22); }
+.pr-cell.g1 { background-color: rgba(255,255,255,0.03); }
+.pr-note { position: absolute; top: 2px; height: 18px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; line-height: 18px; text-align: center; overflow: hidden; cursor: ew-resize; z-index: 2; user-select: none; touch-action: none; }
+.pr-note.melody { background: var(--accent); color: #fff; }
+.pr-note.bass { background: var(--accent2); color: #08131f; }
+.pr-note::after { content: ''; position: absolute; inset-inline-end: 0; top: 0; width: 10px; height: 100%; cursor: ew-resize; background: rgba(255,255,255,0.25); border-radius: 0 4px 4px 0; }
 .roll-cell.vel.on { background: rgba(241,196,15,0.12); }
 .roll-cell.cur { box-shadow: inset 0 0 0 2px #fff; }
 

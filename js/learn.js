@@ -136,6 +136,13 @@ const LearnMode = {
 
     this.maxCombo = 0;
     this.totalHits = 0;
+    this._barStats = {};
+    // pre-fill totals per bar so accuracy is hit/total
+    (song.notes || []).forEach(n => {
+      const bar = Math.floor(n.t / 4);
+      const st = this._barStats[bar] || (this._barStats[bar] = { hit: 0, total: 0 });
+      st.total++;
+    });
     this.backingData = window.TonoraBacking ? window.TonoraBacking.buildBacking(song) : null;
     if (this.backingData) this.setStatus(`${t('listen')} · ${this.backingData.keyName} major`);
     const skipBtn = document.getElementById('learn-skip');
@@ -304,6 +311,11 @@ const LearnMode = {
       const pts = bestD < 120 / this.speed ? 100 : 50;
       this.score += pts + this.combo * 5;
       this.setStatus(bestD < 120 / this.speed ? t('perfect') : t('good'));
+      // per-bar insight bookkeeping
+      this._barStats = this._barStats || {};
+      const bar = Math.floor(best.n.t / 4);
+      const st = this._barStats[bar] || (this._barStats[bar] = { hit: 0, total: 0 });
+      st.hit++; st.total++;
       
       const rect = this._keyRects && this._keyRects[note];
       if (rect) {
@@ -501,6 +513,21 @@ const LearnMode = {
     const currentIdx = window.TONORA_SONGS.findIndex(s => s.id === this.song.id);
     const nextSong = window.TONORA_SONGS[(currentIdx + 1) % window.TONORA_SONGS.length];
 
+    // per-bar insights: which bars were weakest?
+    const bars = Object.keys(this._barStats || {}).map(Number).sort((a, b) => a - b);
+    const accOf = (bar) => {
+      const st = this._barStats[bar];
+      return st && st.total ? Math.round(st.hit / st.total * 100) : 0;
+    };
+    const worst = bars.length ? bars.slice().sort((a, b) => accOf(a) - accOf(b))[0] : 0;
+    const barRows = bars.map(bar => {
+      const acc = accOf(bar);
+      const color = acc >= 85 ? '#2ecc71' : acc >= 60 ? '#f1c40f' : '#e74c3c';
+      return `<div class="bar-row"><span>Bar ${bar + 1}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${acc}%; background:${color}"></div></div>
+        <span>${acc}%</span></div>`;
+    }).join('');
+
     modal.classList.remove('hidden');
     modal.innerHTML = `
       <div class="summary-card">
@@ -512,14 +539,49 @@ const LearnMode = {
           <div class="sum-item"><small>${t('maxCombo')}</small><strong>🔥 ${this.maxCombo || 0}</strong></div>
           <div class="sum-item"><small>🏆 ${t('bestScore')}</small><strong>${best}</strong></div>
         </div>
+        ${bars.length > 1 ? `<div class="insights"><h4>📊 Per-bar accuracy</h4>${barRows}</div>` : ''}
         <div class="summary-actions">
           <button class="btn primary" id="sum-replay">🔄 ${t('playAgain')}</button>
+          ${bars.length > 1 ? `<button class="btn" id="sum-weak">🎯 Weakest bar (${worst + 1})</button>` : ''}
           <button class="btn" id="sum-next">⏭️ ${t('nextSong')}</button>
           <button class="btn" id="sum-list">📋 ${t('songsList')}</button>
         </div>
       </div>
     `;
     modal.querySelector('#sum-replay').onclick = () => { modal.classList.add('hidden'); this.start(this.song); };
+    const weakBtn = modal.querySelector('#sum-weak');
+    if (weakBtn) weakBtn.onclick = () => {
+      modal.classList.add('hidden');
+      // loop the weakest bar via the A–B repeat mechanism
+      const startIdx = this.song.notes.findIndex(n => Math.floor(n.t / 4) === worst);
+      const notes = this.song.notes.filter(n => Math.floor(n.t / 4) === worst);
+      this.start(this.song);
+      // jump straight to play and set the repeat window after boot
+      setTimeout(() => {
+        if (this.phase === 'listen') {
+          if (this._listenTimers) this._listenTimers.forEach(x => clearTimeout(x));
+          if (this._scheduledVoices) this._scheduledVoices.forEach(v => { try { if (v && v.stop) v.stop(); } catch (e) {} });
+          clearTimeout(this._listenTimer);
+          const spb = 60 / this.song.bpm / this.speed;
+          this.repeat = { startIdx: Math.max(0, startIdx), count: Math.max(1, notes.length) };
+          const skipBtn = document.getElementById('learn-skip');
+          if (skipBtn) skipBtn.classList.add('hidden');
+          this.beginPlay(spb);
+          const ab = document.getElementById('learn-ab');
+          if (ab) { ab.classList.add('active'); ab.textContent = `🔁 ${t('repeatOn')}`; }
+        } else {
+          this.repeat = { startIdx: Math.max(0, startIdx), count: Math.max(1, notes.length) };
+          const spb = this.spb;
+          this.phase = 'play';
+          this.startTime = performance.now() + 1200 - this.song.notes[this.repeat.startIdx].t * spb * 1000;
+          this.hitIdx = new Set();
+          this.combo = 0;
+          this.setScore();
+          const ab = document.getElementById('learn-ab');
+          if (ab) { ab.classList.add('active'); ab.textContent = `🔁 ${t('repeatOn')}`; }
+        }
+      }, 60);
+    };
     modal.querySelector('#sum-next').onclick = () => { modal.classList.add('hidden'); this.start(nextSong); };
     modal.querySelector('#sum-list').onclick = () => { modal.classList.add('hidden'); this.stop(); this.enter(document.getElementById('app')); };
   },

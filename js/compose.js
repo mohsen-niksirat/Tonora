@@ -95,6 +95,7 @@ const ComposeMode = {
         <button class="btn toggle" id="cmp-metro" title="Metronome while playing">🎚️ ${t('metro')}</button>
         <label title="Humanize (timing variation)">🤹 <input type="range" id="cmp-human" min="0" max="60" step="5" value="${this.humanize || 0}" style="width:6em"></label>
         <button class="btn toggle" id="cmp-vellane" title="Velocity lane">📊 VEL</button>
+        <button class="btn toggle" id="cmp-prview" title="Piano-roll view">🎼 Roll</button>
         <button class="btn" id="cmp-mixer-btn">🎚️ Mixer</button>
         <button class="btn toggle" id="mute-mel" title="Mute melody">🎹 ${t('melody')}</button>
         <button class="btn toggle" id="mute-drm" title="Mute drums">🥁 ${t('drums')}</button>
@@ -112,10 +113,20 @@ const ComposeMode = {
         </select>
         <button class="btn" id="cmp-saveas" title="${t('saveAs')}">＋</button>
         <button class="btn danger" id="cmp-delproj" title="${t('delete')}">🗑</button>
+        <button class="btn" id="cmp-chain" title="Pattern chain">🔗⛓</button>
         <button class="btn danger" id="cmp-clear">${t('clear')}</button>
         </div>
       </div>
       <div id="cmp-mixer-panel" class="hidden" style="background:var(--bg2); padding:1rem; border-radius:0.5rem; margin-bottom:1rem; display:flex; gap:1.5rem; border:1px solid rgba(255,255,255,0.1)">
+      </div>
+      <div id="cmp-chain-panel" class="hidden" style="background:var(--bg2); padding:1rem; border-radius:0.5rem; margin-bottom:1rem; border:1px solid rgba(255,255,255,0.1)">
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.5rem">
+          <strong>⛓ Chain</strong>
+          <button class="btn" id="chain-add" title="Snapshot current pattern as a section">＋ Add section</button>
+          <button class="btn toggle" id="chain-mode" title="Play sections in order">▶ Chain: off</button>
+          <button class="btn danger" id="chain-clear">Clear</button>
+        </div>
+        <div id="chain-list" style="display:flex; gap:0.5rem; flex-wrap:wrap"></div>
       </div>
       <div class="roll-wrap" id="roll"></div>
     `;
@@ -192,6 +203,14 @@ const ComposeMode = {
     };
     const grooveSel = root.querySelector('#cmp-groove');
     if (grooveSel) grooveSel.onchange = e => { if (e.target.value) { this.applyGroove(e.target.value); e.target.value = ''; } };
+    const prBtn = root.querySelector('#cmp-prview');
+    if (this.pianoRollView) prBtn.classList.add('active');
+    prBtn.onclick = () => {
+      this.stop();
+      this.pianoRollView = !this.pianoRollView;
+      prBtn.classList.toggle('active', this.pianoRollView);
+      this.buildRoll();
+    };
     root.querySelector('#cmp-presets').onchange = e => {
       if (e.target.value) { this.loadPreset(e.target.value); e.target.value = ''; }
     };
@@ -212,6 +231,25 @@ const ComposeMode = {
     root.querySelector('#cmp-save').onclick = () => this.save();
     root.querySelector('#cmp-export').onclick = () => this.exportSong();
     root.querySelector('#cmp-share').onclick = () => this.shareSong();
+    // chain panel wiring
+    if (!Array.isArray(this.sections)) this.sections = [];
+    if (this.chainMode === undefined) this.chainMode = false;
+    const chainPanel = root.querySelector('#cmp-chain-panel');
+    const chainAdd = root.querySelector('#chain-add');
+    const chainModeBtn = root.querySelector('#chain-mode');
+    const chainClear = root.querySelector('#chain-clear');
+    if (chainAdd) chainAdd.onclick = () => this.addSection();
+    if (chainModeBtn) {
+      chainModeBtn.textContent = this.chainMode ? '▶ Chain: on' : '▶ Chain: off';
+      chainModeBtn.classList.toggle('active', this.chainMode);
+      chainModeBtn.onclick = () => {
+        this.chainMode = !this.chainMode;
+        chainModeBtn.textContent = this.chainMode ? '▶ Chain: on' : '▶ Chain: off';
+        chainModeBtn.classList.toggle('active', this.chainMode);
+      };
+    }
+    if (chainClear) chainClear.onclick = () => { this.snapshot(); this.sections = []; this.renderChainList(); };
+    this.renderChainList();
     root.querySelector('#cmp-wav').onclick = () => this.exportWav();
     root.querySelector('#cmp-midi').onclick = () => this.exportMidi();
     root.querySelector('#cmp-practice').onclick = () => this.practiceInLearn();
@@ -223,6 +261,7 @@ const ComposeMode = {
       const name = prompt(t('projectName'), 'Song ' + (Object.keys(this.projectList()).length + 1));
       if (name) this.saveProject(name);
     };
+    root.querySelector('#cmp-chain').onclick = () => this.toggleChainPanel();
     root.querySelector('#cmp-delproj').onclick = () => {
       if (projSel.value && confirm(t('confirmDelete'))) this.deleteProject(projSel.value);
     };
@@ -334,7 +373,7 @@ const ComposeMode = {
 
   async saveProject(name) {
     this.tracks.velocity = this.velocity;
-    const data = { bpm: this.bpm, steps: this.steps, tracks: this.tracks, savedAt: Date.now() };
+    const data = { bpm: this.bpm, steps: this.steps, tracks: this.tracks, sections: this.sections || [], savedAt: Date.now() };
     if (window.TonoraStore) await window.TonoraStore.set(name, data);
     else {
       const all = this.projectList();
@@ -356,6 +395,8 @@ const ComposeMode = {
     this.steps = d.steps || 32;
     this.bpm = d.bpm || 120;
     this.tracks = this.normalizeTracks(d.tracks);
+    this.sections = Array.isArray(d.sections) ? d.sections : [];
+    this.renderChainList();
     if (d.tracks.velocity !== undefined) this.velocity = d.tracks.velocity;
     const lenSel = document.getElementById('cmp-len');
     if (lenSel) lenSel.value = this.steps;
@@ -613,7 +654,21 @@ const ComposeMode = {
     if (Array.isArray(tr.stepVel)) {
       for (let s = 0; s < Math.min(this.steps, tr.stepVel.length); s++) stepVel[s] = tr.stepVel[s] || 0;
     }
-    return { melody: fix(tr.melody), drums: d, bass: fix(tr.bass), mixer: mix, velocity: tr.velocity, stepVel };
+    const noteLen = {
+      melody: new Array(this.steps).fill(2),
+      bass: new Array(this.steps).fill(2)
+    };
+    if (tr.noteLen && typeof tr.noteLen === 'object') {
+      for (const key of ['melody', 'bass']) {
+        if (Array.isArray(tr.noteLen[key])) {
+          for (let s = 0; s < Math.min(this.steps, tr.noteLen[key].length); s++) {
+            const v = tr.noteLen[key][s];
+            if (v > 0) noteLen[key][s] = Math.min(8, v);
+          }
+        }
+      }
+    }
+    return { melody: fix(tr.melody), drums: d, bass: fix(tr.bass), mixer: mix, velocity: tr.velocity, stepVel, noteLen };
   },
 
   resizeTracks() {
@@ -629,9 +684,19 @@ const ComposeMode = {
       this.tracks.drums.hat = r(this.tracks.drums.hat || [], false);
     }
     this.tracks.stepVel = r(this.tracks.stepVel || [], 0);
+    // parallel note-length lane (1–8 sixteenths), default 2
+    const rl = (arr) => {
+      const a = Array.isArray(arr) ? arr : [];
+      if (a.length > this.steps) return a.slice(0, this.steps);
+      return [...a, ...new Array(this.steps - a.length).fill(2)];
+    };
+    this.tracks.noteLen = this.tracks.noteLen || {};
+    this.tracks.noteLen.melody = rl((this.tracks.noteLen || {}).melody);
+    this.tracks.noteLen.bass = rl((this.tracks.noteLen || {}).bass);
   },
 
   buildRoll() {
+    if (this.pianoRollView) { this.buildPianoRoll(); return; }
     const roll = document.getElementById('roll');
     roll.innerHTML = '';
     const notes = ['C5','B4','A4','G4','F4','E4','D4','C4']; // melody rows
@@ -712,8 +777,180 @@ const ComposeMode = {
   },
 
   stepHas(v, n) {
-    if (Array.isArray(v)) return v.includes(n);
+    if (Array.isArray(v)) return v.includes(n) || v.some(x => x && typeof x === 'object' && x.n === n);
+    if (v && typeof v === 'object') return v.n === n;
     return v === n;
+  },
+
+  /* normalize a cell to an array of {n, len} hit objects (len in steps) */
+  _cellHits(cell, s, track) {
+    const lenOf = (n) => {
+      const arr = (this.tracks.noteLen && this.tracks.noteLen[track]) || [];
+      const v = arr[s];
+      return (v && v > 0) ? Math.min(8, v) : 2;
+    };
+    if (!cell) return [];
+    if (typeof cell === 'string') return [{ n: cell, len: lenOf(cell) }];
+    if (cell && typeof cell === 'object' && !Array.isArray(cell)) return [{ n: cell.n, len: lenOf(cell.n) }];
+    if (Array.isArray(cell)) {
+      return cell.map(x => (x && typeof x === 'object') ? { n: x.n, len: lenOf(x.n) } : { n: x, len: lenOf(x) }).filter(h => h.n);
+    }
+    return [];
+  },
+
+  /* chromatic piano-roll view (C3–B5): click = note, drag = stretch, right-click = erase */
+  buildPianoRoll() {
+    const roll = document.getElementById('roll');
+    roll.innerHTML = '';
+    const SEMIS = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+    const rows = [];
+    for (let oct = 5; oct >= 3; oct--) {
+      SEMIS.slice().reverse().forEach(pc => { /* built below in order */ });
+    }
+    // build high→low
+    const ordered = [];
+    for (let oct = 5; oct >= 3; oct--) {
+      for (let i = SEMIS.length - 1; i >= 0; i--) ordered.push(SEMIS[i] + oct);
+    }
+    const mkRow = (label, cells, isBlack) => {
+      const row = document.createElement('div');
+      row.className = 'roll-row pr-row' + (isBlack ? ' pr-black' : '');
+      const lab = document.createElement('div');
+      lab.className = 'roll-label pr-label';
+      lab.textContent = label;
+      row.appendChild(lab);
+      cells.forEach((cell) => row.appendChild(cell));
+      roll.appendChild(row);
+    };
+    const grid = document.createElement('div');
+    grid.className = 'pr-grid';
+    ordered.forEach(n => {
+      const isBlack = n.includes('#');
+      const cells = [];
+      for (let s = 0; s < this.steps; s++) {
+        const c = document.createElement('div');
+        const groupCls = Math.floor(s / 4) % 2 === 0 ? 'g1' : 'g2';
+        c.className = `pr-cell ${groupCls}${isBlack ? ' black' : ''}`;
+        c.dataset.note = n;
+        c.dataset.step = s;
+        cells.push(c);
+      }
+      mkRow(n, cells, isBlack);
+    });
+    // overlay note blocks
+    const hits = new Set();
+    const place = (track, instId) => {
+      for (let s = 0; s < this.steps; s++) {
+        this._cellHits(this.tracks[track][s], s, track).forEach(h => {
+          const key = track + ':' + h.n + ':' + s;
+          if (hits.has(key)) return;
+          hits.add(key);
+          const el = document.createElement('div');
+          el.className = `pr-note ${track}`;
+          el.style.left = `calc(var(--pr-lab) + ${s} * var(--pr-cell))`;
+          el.style.width = `calc(${Math.min(h.len, this.steps - s)} * var(--pr-cell) - 3px)`;
+          el.textContent = h.n.replace(/-?\d+$/, '');
+          el.title = `${h.n} · ${h.len} steps — drag right edge to stretch`;
+          el.dataset.note = h.n;
+          el.dataset.step = s;
+          el.dataset.len = h.len;
+          const rowsEl = roll.querySelectorAll('.pr-row');
+          const rowIdx = ordered.indexOf(h.n);
+          if (rowIdx >= 0 && rowsEl[rowIdx]) rowsEl[rowIdx].appendChild(el);
+          this._wireNoteBlock(el, track, instId);
+        });
+      }
+    };
+    place('melody', 'piano');
+    place('bass', 'synth');
+    // interactions on empty cells: click adds, right-click erases step
+    roll.querySelectorAll('.pr-cell').forEach(c => {
+      c.addEventListener('pointerdown', (e) => {
+        if (e.button === 2) {
+          e.preventDefault();
+          this._prErase(c.dataset.note, +c.dataset.step);
+        } else {
+          this._prAdd(c.dataset.note, +c.dataset.step);
+        }
+      });
+    });
+    roll.addEventListener('contextmenu', (e) => {
+      if (e.target.closest && e.target.closest('.pr-grid, .roll-row')) e.preventDefault();
+    });
+  },
+
+  _prAdd(n, s) {
+    this.toggleNote('melody', s, n, 'piano', 0.3, null);
+  },
+
+  _prErase(n, s) {
+    const arr = this.tracks.melody;
+    const cell = arr[s];
+    let changed = false;
+    if (Array.isArray(cell)) {
+      const i = cell.findIndex(x => (x && typeof x === 'object' ? x.n : x) === n);
+      if (i >= 0) { this.snapshot(); cell.splice(i, 1); if (!cell.length) arr[s] = null; changed = true; }
+    } else if ((cell && typeof cell === 'object' ? cell.n : cell) === n) {
+      this.snapshot(); arr[s] = null; changed = true;
+    }
+    if (changed) this.buildPianoRoll();
+  },
+
+  _wireNoteBlock(el, track, instId) {
+    // drag the right edge to stretch 1..8 steps
+    let drag = null;
+    el.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      if (e.button === 2) {
+        e.preventDefault();
+        this._prEraseBlock(el);
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      const edge = rect.right - e.clientX < 14;
+      drag = { edge, startX: e.clientX, startLen: +el.dataset.len || 2, s: +el.dataset.step, moved: false };
+      el.setPointerCapture(e.pointerId);
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const cellW = el.parentElement ? el.parentElement.clientWidth / Math.max(1, this.steps + 1) : 24;
+      const dSteps = Math.round((e.clientX - drag.startX) / Math.max(8, cellW));
+      if (dSteps !== 0) drag.moved = true;
+      if (drag.edge && dSteps !== 0) {
+        const nl = Math.max(1, Math.min(8, drag.startLen + dSteps));
+        el.dataset.len = nl;
+        el.style.width = `calc(${Math.min(nl, this.steps - drag.s)} * var(--pr-cell) - 3px)`;
+      }
+    });
+    el.addEventListener('pointerup', (e) => {
+      if (!drag) return;
+      const nl = +el.dataset.len || 2;
+      if (drag.edge && nl !== drag.startLen) {
+        this.snapshot();
+        this.tracks.noteLen = this.tracks.noteLen || {};
+        this.tracks.noteLen[track] = this.tracks.noteLen[track] || new Array(this.steps).fill(2);
+        this.tracks.noteLen[track][drag.s] = nl;
+      } else if (!drag.moved) {
+        // plain click on the block → preview + erase (toggle off)
+        this._prEraseBlock(el);
+      }
+      drag = null;
+    });
+  },
+
+  _prEraseBlock(el) {
+    const n = el.dataset.note, s = +el.dataset.step;
+    const arr = this.tracks[el.classList.contains('bass') ? 'bass' : 'melody'];
+    const cell = arr[s];
+    this.snapshot();
+    if (Array.isArray(cell)) {
+      const i = cell.findIndex(x => (x && typeof x === 'object' ? x.n : x) === n);
+      if (i >= 0) cell.splice(i, 1);
+      if (!cell.length) arr[s] = null;
+    } else {
+      arr[s] = null;
+    }
+    this.buildPianoRoll();
   },
 
   toggleNote(track, s, n, instId, previewDur, cell) {
@@ -746,14 +983,96 @@ const ComposeMode = {
 
   togglePlay() { this.playing ? this.stop() : this.start(); },
 
+  /* ---- pattern chain (sections) ---- */
+  toggleChainPanel() {
+    const p = document.getElementById('cmp-chain-panel');
+    if (p) p.classList.toggle('hidden');
+    const b = document.getElementById('cmp-chain');
+    if (b && p) b.classList.toggle('active', !p.classList.contains('hidden'));
+  },
+
+  addSection() {
+    this.snapshot();
+    if (!Array.isArray(this.sections)) this.sections = [];
+    const copy = JSON.parse(JSON.stringify({ steps: this.steps, bpm: this.bpm, tracks: this.tracks }));
+    this.sections.push({ name: 'S' + (this.sections.length + 1), ...copy });
+    this.renderChainList();
+  },
+
+  removeSection(i) {
+    this.snapshot();
+    this.sections.splice(i, 1);
+    this.sections.forEach((s, k) => { s.name = 'S' + (k + 1); });
+    this.renderChainList();
+  },
+
+  loadSection(i) {
+    const sec = this.sections && this.sections[i];
+    if (!sec) return;
+    this.snapshot();
+    this.steps = sec.steps || 32;
+    this.bpm = sec.bpm || 120;
+    this.tracks = this.normalizeTracks(JSON.parse(JSON.stringify(sec.tracks || {})));
+    const lenSel = typeof document !== 'undefined' ? document.getElementById('cmp-len') : null;
+    if (lenSel) lenSel.value = this.steps;
+    const bpmIn = typeof document !== 'undefined' ? document.getElementById('cmp-bpm') : null;
+    if (bpmIn) bpmIn.value = this.bpm;
+    if (typeof document !== 'undefined' && document.getElementById('roll')) {
+      this.buildRoll();
+      if (this.buildMixerUI) this.buildMixerUI();
+      this.updateDuration();
+    }
+  },
+
+  renderChainList() {
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById('chain-list');
+    if (!el) return;
+    el.innerHTML = '';
+    (this.sections || []).forEach((sec, i) => {
+      const b = document.createElement('div');
+      b.style.cssText = 'display:flex; gap:0.25rem; align-items:center; background:rgba(255,255,255,0.06); border-radius:0.4rem; padding:0.25rem 0.5rem;';
+      b.innerHTML = `<button class="btn" data-act="load" title="Load into editor">${sec.name} · ${sec.steps}st</button>
+        <button class="btn danger" data-act="del" title="Remove">✕</button>`;
+      b.querySelector('[data-act=load]').onclick = () => this.loadSection(i);
+      b.querySelector('[data-act=del]').onclick = () => this.removeSection(i);
+      el.appendChild(b);
+    });
+  },
+
   start() {
     window.TonoraAudio.ensure();
     this.playing = true;
     this._swingMult = 1;
     const playBtn = document.getElementById('cmp-play');
     if (playBtn) { playBtn.classList.add('primary'); playBtn.textContent = '⏸'; }
-    if (this.countIn) this._countIn(() => this._beginAt(0));
+    const chained = this.chainMode && Array.isArray(this.sections) && this.sections.length > 0;
+    if (chained) {
+      // stash the live-edited buffer, then walk through sections
+      this._chainReturn = { steps: this.steps, bpm: this.bpm, tracks: this.tracks };
+      this._chainIdx = 0;
+      this._chainCount = this.sections.length;
+      this._playSection(this._chainIdx, () => {
+        if (this.countIn) this._countIn(() => this._beginAt(0));
+        else this._beginAt(0);
+      });
+    } else if (this.countIn) this._countIn(() => this._beginAt(0));
     else this._beginAt(0);
+  },
+
+  /* load section i and invoke done (used by chain playback) */
+  _playSection(i, done) {
+    const sec = this.sections[i];
+    if (!sec) { if (done) done(); return; }
+    this.steps = sec.steps || 32;
+    this.bpm = sec.bpm || 120;
+    this.tracks = this.normalizeTracks(JSON.parse(JSON.stringify(sec.tracks || {})));
+    const lenSel = document.getElementById('cmp-len'); if (lenSel) lenSel.value = this.steps;
+    const bpmIn = document.getElementById('cmp-bpm'); if (bpmIn) bpmIn.value = this.bpm;
+    this.buildRoll();
+    if (this.buildMixerUI) this.buildMixerUI();
+    this.updateDuration();
+    if (done) done();
   },
 
   /* four-beat count-in, then hand off to the sequencer loop */
@@ -791,6 +1110,20 @@ const ComposeMode = {
       dur *= (this._swingMult || 1);
       this._swingMult = 1;
 
+      const chained = this.chainMode && Array.isArray(this.sections) && this.sections.length > 1;
+      if (chained && s >= this.steps - 1) {
+        // end of a section → advance to the next one
+        this._chainIdx = (this._chainIdx + 1) % this.sections.length;
+        const sec = this.sections[this._chainIdx];
+        this.steps = sec.steps || 32;
+        this.tracks = this.normalizeTracks(JSON.parse(JSON.stringify(sec.tracks || {})));
+        const lenSel = document.getElementById('cmp-len'); if (lenSel) lenSel.value = this.steps;
+        this.buildRoll();
+        this.updateDuration();
+        this.step = 0;
+        this.timer = setTimeout(tick, dur * 1000);
+        return;
+      }
       this.step = (this.step + 1) % this.steps;
       this.timer = setTimeout(tick, dur * 1000);
     };
@@ -828,14 +1161,12 @@ const ComposeMode = {
     const hz = Math.max(0, Math.min(60, this.humanize || 0));
     const when = hz > 0 ? (Math.random() * 2 - 1) * (hz / 1000) : 0;
     if (audible('melody')) {
-      const m = this.tracks.melody[s];
-      if (m) (Array.isArray(m) ? m : [m]).forEach(n =>
-        window.TonoraAudio.playNote(this.inst('piano'), n, this.stepDur() * 2, vel, when, { bus: 'melody' }));
+      this._cellHits(this.tracks.melody[s], s, 'melody').forEach(h =>
+        window.TonoraAudio.playNote(this.inst('piano'), h.n, this.stepDur() * h.len, vel, when, { bus: 'melody' }));
     }
     if (audible('bass')) {
-      const b = this.tracks.bass[s];
-      if (b) (Array.isArray(b) ? b : [b]).forEach(n =>
-        window.TonoraAudio.playNote(this.inst('synth'), n, this.stepDur() * 3, vel, when, { bus: 'bass' }));
+      this._cellHits(this.tracks.bass[s], s, 'bass').forEach(h =>
+        window.TonoraAudio.playNote(this.inst('synth'), h.n, this.stepDur() * h.len + this.stepDur(), vel, when, { bus: 'bass' }));
     }
     if (audible('drums')) {
       const d = this.inst('drums');
@@ -853,6 +1184,19 @@ const ComposeMode = {
   stop() {
     this.playing = false;
     clearTimeout(this.timer);
+    // restore the live buffer after chained playback
+    if (this._chainReturn) {
+      this.steps = this._chainReturn.steps;
+      this.bpm = this._chainReturn.bpm;
+      this.tracks = this._chainReturn.tracks;
+      this._chainReturn = null;
+      this._chainIdx = 0;
+      const lenSel = document.getElementById('cmp-len'); if (lenSel) lenSel.value = this.steps;
+      const bpmIn = document.getElementById('cmp-bpm'); if (bpmIn) bpmIn.value = this.bpm;
+      this.buildRoll();
+      if (this.buildMixerUI) this.buildMixerUI();
+      this.updateDuration();
+    }
     const playBtn = document.getElementById('cmp-play');
     if (playBtn) { playBtn.classList.remove('primary'); playBtn.textContent = '▶'; }
     document.querySelectorAll('.roll-cell.cur').forEach(c => c.classList.remove('cur'));
@@ -958,27 +1302,19 @@ const ComposeMode = {
   toSongObject() {
     const notes = [];
     const durBeats = 0.25; // 16th note step = 0.25 beats
+    const pushCell = (cell, s, track) => {
+      this._cellHits(cell, s, track).forEach(h =>
+        notes.push({ n: h.n, t: s * durBeats, d: h.len * durBeats }));
+    };
     for (let s = 0; s < this.steps; s++) {
       const mel = this.tracks && this.tracks.melody ? this.tracks.melody[s] : null;
-      if (mel) {
-        if (Array.isArray(mel)) {
-          mel.forEach(n => notes.push({ n, t: s * durBeats, d: durBeats }));
-        } else {
-          notes.push({ n: mel, t: s * durBeats, d: durBeats });
-        }
-      }
+      if (mel) pushCell(mel, s, 'melody');
     }
     // If melody is empty, fallback to bass track
     if (!notes.length && this.tracks && this.tracks.bass) {
       for (let s = 0; s < this.steps; s++) {
         const b = this.tracks.bass[s];
-        if (b) {
-          if (Array.isArray(b)) {
-            b.forEach(n => notes.push({ n, t: s * durBeats, d: durBeats }));
-          } else {
-            notes.push({ n: b, t: s * durBeats, d: durBeats });
-          }
-        }
+        if (b) pushCell(b, s, 'bass');
       }
     }
     if (!notes.length) return null;

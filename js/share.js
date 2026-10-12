@@ -11,10 +11,14 @@ const TonoraShare = {
       bs: tracks.bass || [],
       d: tracks.drums || {},
       v: tracks.velocity !== undefined ? tracks.velocity : undefined,
-      mx: tracks.mixer || undefined
+      mx: tracks.mixer || undefined,
+      sv: tracks.stepVel || undefined,
+      nl: tracks.noteLen || undefined
     };
     if (slim.v === undefined) delete slim.v;
     if (slim.mx === undefined) delete slim.mx;
+    if (slim.sv === undefined) delete slim.sv;
+    if (slim.nl === undefined) delete slim.nl;
     return slim;
   },
   _unpack(o) {
@@ -26,7 +30,9 @@ const TonoraShare = {
         bass: o.bs || [],
         drums: o.d || {},
         mixer: o.mx,
-        velocity: o.v
+        velocity: o.v,
+        stepVel: o.sv,
+        noteLen: o.nl
       }
     };
   },

@@ -982,6 +982,18 @@ async function renderCompositionToWav(tracks, bpm, steps, swing) {
     const v = tracks.stepVel && tracks.stepVel[s];
     return (v && v > 0) ? v : baseVel;
   };
+  const noteLen = (track, s) => {
+    const a = tracks.noteLen && tracks.noteLen[track];
+    const v = a && a[s];
+    return (v && v > 0) ? Math.min(8, v) : 2;
+  };
+  const cellHits = (cell, s, track) => {
+    if (!cell) return [];
+    if (typeof cell === 'string') return [{ n: cell, len: noteLen(track, s) }];
+    if (cell && typeof cell === 'object' && !Array.isArray(cell)) return [{ n: cell.n, len: noteLen(track, s) }];
+    if (Array.isArray(cell)) return cell.map(x => ({ n: (x && typeof x === 'object') ? x.n : x, len: noteLen(track, s) })).filter(h => h.n);
+    return [];
+  };
 
   // offline buses mirroring the live mixer (gain + pan), so the render
   // reflects the same volume/pan settings the user hears in the app
@@ -1017,13 +1029,11 @@ async function renderCompositionToWav(tracks, bpm, steps, swing) {
     const vel = stepVel(s);
     const mel = tracks.melody[s];
     if (mel && audible('melody')) {
-      const notesArr = Array.isArray(mel) ? mel : [mel];
-      notesArr.forEach(n => eng.scheduleNote(off, buses.melody, null, inst('piano'), n, dur * 2, vel, when, {}, null));
+      cellHits(mel, s, 'melody').forEach(h => eng.scheduleNote(off, buses.melody, null, inst('piano'), h.n, dur * h.len, vel, when, {}, null));
     }
     const bass = tracks.bass[s];
     if (bass && audible('bass')) {
-      const notesArr = Array.isArray(bass) ? bass : [bass];
-      notesArr.forEach(n => eng.scheduleNote(off, buses.bass, null, inst('synth'), n, dur * 3, vel, when, {}, null));
+      cellHits(bass, s, 'bass').forEach(h => eng.scheduleNote(off, buses.bass, null, inst('synth'), h.n, dur * h.len + dur, vel, when, {}, null));
     }
 
     // Check old style single drum array, or new style dict

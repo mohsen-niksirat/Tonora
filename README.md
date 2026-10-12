@@ -23,6 +23,11 @@ Tonora is a client-side music studio: play virtual instruments, learn famous son
 
 ## Changelog
 
+### v7.1 (The Pro Edit Update) — Piano-roll, Pattern Chaining & Practice Insights
+- 🎼 **True Piano-roll** — toggle 🎼 Roll in Compose for a chromatic C3–B5 editor: click to place a note, drag its right edge to stretch the length (1–8 steps), right-click to erase. Note lengths persist through undo, save, share, and MIDI/WAV export.
+- ⛓ **Pattern Chaining** — snapshot the current pattern as named sections (S1, S2, …) in the ⛓ panel, then play them back-to-back with Chain mode on. Great for verse/chorus structures. Sections are saved inside projects.
+- 📊 **Practice Insights** — the lesson summary now shows per-bar accuracy bars and a 🎯 Weakest Bar button that instantly loops the hardest section via A–B repeat.
+
 ### v7.0 (The Studio Update) — Offline PWA, Capture, Share & Groove
 - 🌐 **Fully Offline PWA** — abcjs and tonal now ship as local vendor bundles, so Theory and notation work with no internet. Everything is in the service-worker cache.
 - 🎙️ **Play → Compose Capture** — the new ● Tape button in Play mode records your live performance with timing and drops it quantized into the sequencer as an editable pattern.

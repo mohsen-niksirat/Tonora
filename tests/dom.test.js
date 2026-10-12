@@ -410,6 +410,39 @@ test('applyGroove sets swing and humanize together', () => {
   assert.strictEqual(CM.humanize, 0);
 });
 
+test('_cellHits returns note lengths from the noteLen lane', () => {
+  const CM = window.__test.ComposeMode;
+  CM.steps = 4;
+  CM.tracks = CM.normalizeTracks({ melody: ['C4', ['E4', 'G4']], bass: [], drums: {}, noteLen: { melody: [4, 1], bass: [] } });
+  const h0 = CM._cellHits(CM.tracks.melody[0], 0, 'melody');
+  assert.strictEqual(h0.length, 1);
+  assert.strictEqual(h0[0].n, 'C4');
+  assert.strictEqual(h0[0].len, 4);
+  const h1 = CM._cellHits(CM.tracks.melody[1], 1, 'melody');
+  assert.strictEqual(h1.length, 2);
+  assert.ok(h1.every(h => h.len === 1), 'chord notes share the step length');
+  const empty = CM._cellHits(null, 0, 'melody');
+  assert.ok(Array.isArray(empty) && empty.length === 0);
+});
+
+test('pattern chain: add, load and remove sections', () => {
+  const CM = window.__test.ComposeMode;
+  CM.steps = 8; CM.bpm = 120;
+  CM.tracks = CM.normalizeTracks({ melody: ['C4'], bass: [], drums: {} });
+  CM.sections = [];
+  CM.addSection();
+  assert.strictEqual(CM.sections.length, 1);
+  assert.strictEqual(CM.sections[0].name, 'S1');
+  CM.tracks = CM.normalizeTracks({ melody: ['E4'], bass: [], drums: {} });
+  CM.addSection();
+  assert.strictEqual(CM.sections[1].name, 'S2');
+  CM.loadSection(0);
+  assert.strictEqual(CM.tracks.melody[0], 'C4');
+  CM.removeSection(0);
+  assert.strictEqual(CM.sections.length, 1);
+  assert.strictEqual(CM.sections[0].name, 'S1', 'names should renumber');
+});
+
 if (process.exitCode) {
   console.error(`\n${passed} passed, some failed.`);
 } else {
