@@ -160,6 +160,7 @@ test('PlayMode plays full chord in chord mode', () => {
   window.TonoraAudio.playNote = origPlay;
   assert.deepStrictEqual(playedNotes, ['A3', 'C4', 'E4']);
   PM.leave();
+  root.remove();
 });
 
 test('PianoUI sets and clears Persian microtone tuning badges and emits microtone notes', () => {
@@ -189,6 +190,43 @@ test('PlayMode getTuningMap returns correct Persian Dastgah note mapping', () =>
   const segah = PM.getTuningMap('segah');
   assert.strictEqual(segah['E3'], 'Ep3');
   assert.strictEqual(segah['B3'], 'Bp3');
+});
+
+test('Santur and Tonbak instruments exist and load correctly', () => {
+  const santur = window.TONORA_INSTRUMENTS.find(i => i.id === 'santur');
+  assert.ok(santur, 'santur instrument definition missing');
+  assert.strictEqual(santur.type, 'santur');
+  assert.ok(santur.dur >= 3.0);
+
+  const tonbak = window.TONORA_INSTRUMENTS.find(i => i.id === 'tonbak');
+  assert.ok(tonbak, 'tonbak instrument definition missing');
+  assert.strictEqual(tonbak.type, 'drumkit');
+  assert.strictEqual(tonbak.pads.length, 6);
+  const padIds = tonbak.pads.map(p => p.id);
+  assert.ok(padIds.includes('tonbak-tom'));
+  assert.ok(padIds.includes('tonbak-bak'));
+  assert.ok(padIds.includes('tonbak-pelang'));
+  assert.ok(padIds.includes('tonbak-riz'));
+  assert.ok(padIds.includes('tonbak-kenar'));
+  assert.ok(padIds.includes('tonbak-choub'));
+});
+
+test('PlayMode renders Tonbak drum pads and handles stroke trigger', () => {
+  const root = window.document.createElement('div');
+  window.document.body.appendChild(root);
+  const PM = window.__test.PlayMode;
+  PM.enter(root);
+  PM.select('tonbak');
+  const pads = root.querySelectorAll('.drum-pad');
+  assert.strictEqual(pads.length, 6, 'should render 6 Tonbak drum pads');
+  let playedPad = null;
+  const origPlayDrum = window.TonoraAudio.playDrum;
+  window.TonoraAudio.playDrum = (inst, padId) => { playedPad = padId; };
+  pads[0].dispatchEvent(new window.Event('pointerdown'));
+  assert.strictEqual(playedPad, 'tonbak-tom');
+  window.TonoraAudio.playDrum = origPlayDrum;
+  PM.leave();
+  root.remove();
 });
 
 if (process.exitCode) {

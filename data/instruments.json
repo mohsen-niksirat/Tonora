@@ -92,6 +92,29 @@
       "adsr": {"a": 0.001, "d": 0.8, "s": 0.0, "r": 0.15}
     },
     {
+      "id": "santur",
+      "name": {"en": "Santur", "fa": "سنتور"},
+      "icon": "🪕",
+      "type": "santur",
+      "dur": 3.8,
+      "damping": 0.9975,
+      "adsr": {"a": 0.001, "d": 1.5, "s": 0.0, "r": 0.3}
+    },
+    {
+      "id": "tonbak",
+      "name": {"en": "Tonbak", "fa": "تنبک"},
+      "icon": "🪘",
+      "type": "drumkit",
+      "pads": [
+        {"id": "tonbak-tom",    "name": {"en": "Tom (Bass)",   "fa": "تُم (بم)"},     "key": "Z", "note": null, "color": "#8e44ad"},
+        {"id": "tonbak-bak",    "name": {"en": "Bak (Treble)", "fa": "بک (زیر)"},    "key": "X", "note": null, "color": "#e67e22"},
+        {"id": "tonbak-pelang", "name": {"en": "Pelang (Snap)", "fa": "پلنگ (بشکن)"}, "key": "C", "note": null, "color": "#e74c3c"},
+        {"id": "tonbak-riz",    "name": {"en": "Riz (Roll)",   "fa": "ریز (غلت)"},   "key": "V", "note": null, "color": "#1abc9c"},
+        {"id": "tonbak-kenar",  "name": {"en": "Kenar (Rim)",  "fa": "کنار"},        "key": "B", "note": null, "color": "#3498db"},
+        {"id": "tonbak-choub",  "name": {"en": "Choub (Wood)", "fa": "چوبک"},        "key": "N", "note": null, "color": "#f39c12"}
+      ]
+    },
+    {
       "id": "drums",
       "name": {"en": "Drums", "fa": "درام"},
       "icon": "🥁",

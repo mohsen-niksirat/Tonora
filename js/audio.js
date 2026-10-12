@@ -453,6 +453,66 @@ class AudioEngine {
         naturalDur = durSec;
         break;
       }
+      case 'santur': {
+        // Physical modeling synthesis of Persian Santur (hammered dulcimer).
+        // Authentic Santur features multiple strings per course struck by wooden mezrabs,
+        // producing a distinct bright percussive hammer attack and shimmering chorus beating.
+        const sr = ctx.sampleRate;
+        const durSec = instDef.dur || 3.8;
+        const total = Math.max(10, Math.floor(sr * durSec));
+        const buf = ctx.createBuffer(1, total, sr);
+        const out = buf.getChannelData(0);
+
+        // Course detune ratios: central pitch + two slightly detuned unison strings (+2.8 cents, -2.5 cents)
+        const detuneFactors = [1.0, Math.pow(2, 2.8 / 1200), Math.pow(2, -2.5 / 1200)];
+        const damp = instDef.damping || 0.9975;
+
+        for (let c = 0; c < detuneFactors.length; c++) {
+          const f = freq * detuneFactors[c];
+          const N = Math.max(2, Math.round(sr / f));
+          const ring = new Float32Array(N);
+          let lp = 0;
+          // Mezrab hammer excitation: crisp bright strike transient with slight high-frequency presence
+          for (let i = 0; i < N; i++) {
+            const w = Math.random() * 2 - 1;
+            lp += 0.75 * (w - lp);
+            ring[i] = lp * (1 - (i / N) * 0.35);
+          }
+          // Mezrab click transient
+          if (N > 8) {
+            ring[0] += (c === 0 ? 0.7 : 0.35);
+            ring[1] -= (c === 0 ? 0.35 : 0.18);
+          }
+
+          let ptr = 0;
+          const courseGain = (c === 0 ? 0.44 : 0.28);
+          for (let n = 0; n < total; n++) {
+            const cur = ring[ptr];
+            out[n] += cur * courseGain;
+            const nxt = ring[(ptr + 1) % N];
+            ring[ptr] = 0.5 * (cur + nxt) * damp;
+            ptr = (ptr + 1) % N;
+          }
+        }
+
+        // Smooth anti-click endpoints
+        const fadeLen = Math.min(256, Math.floor(sr * 0.01));
+        for (let i = 0; i < fadeLen; i++) {
+          out[total - 1 - i] *= (i / fadeLen);
+        }
+        const attackFade = Math.min(48, Math.floor(sr * 0.001));
+        for (let i = 0; i < attackFade; i++) {
+          out[i] *= (i / attackFade);
+        }
+
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(g);
+        src.start(t);
+        nodes.push(src);
+        naturalDur = durSec;
+        break;
+      }
       case 'fm': {
         // FM: carrier + modulator (soft, flute-like)
         const car = ctx.createOscillator();
@@ -626,6 +686,128 @@ class AudioEngine {
         g.gain.setValueAtTime(vel * 0.4, t);
         g.gain.exponentialRampToValueAtTime(0.001, t + 1.1);
         n.connect(f); f.connect(g); n.start(t);
+        break;
+      }
+      // Tonbak (Persian Goblet Drum) synthesis
+      case 'tonbak-tom': {
+        const o = ctx.createOscillator();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(88, t);
+        o.frequency.exponentialRampToValueAtTime(54, t + 0.22);
+        const f = ctx.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.value = 220;
+        g.gain.setValueAtTime(vel * 1.1, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
+        o.connect(f); f.connect(g);
+        o.start(t); o.stop(t + 0.45);
+        break;
+      }
+      case 'tonbak-bak': {
+        const o = ctx.createOscillator();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(280, t);
+        o.frequency.exponentialRampToValueAtTime(195, t + 0.12);
+        const og = ctx.createGain();
+        og.gain.setValueAtTime(vel * 0.75, t);
+        og.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+        o.connect(og); og.connect(g);
+        o.start(t); o.stop(t + 0.24);
+
+        const n = noise(0.04);
+        const nf = ctx.createBiquadFilter();
+        nf.type = 'bandpass';
+        nf.frequency.value = 2400;
+        nf.Q.value = 2.5;
+        const ng = ctx.createGain();
+        ng.gain.setValueAtTime(vel * 0.45, t);
+        ng.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+        n.connect(nf); nf.connect(ng); ng.connect(g);
+        n.start(t);
+        break;
+      }
+      case 'tonbak-pelang': {
+        const n = noise(0.08);
+        const f = ctx.createBiquadFilter();
+        f.type = 'bandpass';
+        f.frequency.value = 3200;
+        f.Q.value = 3.0;
+        const ng = ctx.createGain();
+        ng.gain.setValueAtTime(vel * 0.9, t);
+        ng.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+        n.connect(f); f.connect(ng); ng.connect(g);
+        n.start(t);
+
+        const o = ctx.createOscillator();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(460, t);
+        o.frequency.exponentialRampToValueAtTime(300, t + 0.05);
+        const og = ctx.createGain();
+        og.gain.setValueAtTime(vel * 0.4, t);
+        og.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+        o.connect(og); og.connect(g);
+        o.start(t); o.stop(t + 0.07);
+        break;
+      }
+      case 'tonbak-riz': {
+        [0, 0.032, 0.064].forEach((offset, idx) => {
+          const o = ctx.createOscillator();
+          o.type = 'triangle';
+          o.frequency.setValueAtTime(240, t + offset);
+          o.frequency.exponentialRampToValueAtTime(180, t + offset + 0.04);
+          const og = ctx.createGain();
+          const subVel = vel * (idx === 0 ? 0.45 : idx === 1 ? 0.6 : 0.5);
+          og.gain.setValueAtTime(subVel, t + offset);
+          og.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.06);
+          o.connect(og); og.connect(g);
+          o.start(t + offset); o.stop(t + offset + 0.07);
+
+          const n = noise(0.03);
+          const nf = ctx.createBiquadFilter();
+          nf.type = 'bandpass';
+          nf.frequency.value = 2200;
+          const ng = ctx.createGain();
+          ng.gain.setValueAtTime(subVel * 0.35, t + offset);
+          ng.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.03);
+          n.connect(nf); nf.connect(ng); ng.connect(g);
+          n.start(t + offset);
+        });
+        break;
+      }
+      case 'tonbak-kenar': {
+        const o = ctx.createOscillator();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(175, t);
+        o.frequency.exponentialRampToValueAtTime(125, t + 0.18);
+        const f = ctx.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.value = 450;
+        g.gain.setValueAtTime(vel * 0.85, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+        o.connect(f); f.connect(g);
+        o.start(t); o.stop(t + 0.28);
+        break;
+      }
+      case 'tonbak-choub': {
+        const o = ctx.createOscillator();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(1100, t);
+        o.frequency.exponentialRampToValueAtTime(750, t + 0.04);
+        const og = ctx.createGain();
+        og.gain.setValueAtTime(vel * 0.7, t);
+        og.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+        o.connect(og); og.connect(g);
+        o.start(t); o.stop(t + 0.06);
+
+        const n = noise(0.03);
+        const f = ctx.createBiquadFilter();
+        f.type = 'highpass';
+        f.frequency.value = 3500;
+        const ng = ctx.createGain();
+        ng.gain.setValueAtTime(vel * 0.5, t);
+        ng.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+        n.connect(f); f.connect(ng); ng.connect(g);
+        n.start(t);
         break;
       }
     }
