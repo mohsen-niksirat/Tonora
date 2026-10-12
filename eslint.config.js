@@ -22,7 +22,9 @@ const projectGlobals = {
   PianoUI: 'readonly', TonoraAchievements: 'readonly', armAudioRevive: 'readonly',
   ComposeMode: 'readonly', LearnMode: 'readonly', PlayMode: 'readonly', TheoryMode: 'readonly',
   Vex: 'readonly', Tonal: 'readonly', ABCJS: 'readonly',
-  buildMidiFile: 'readonly', midiToTracks: 'readonly', TonoraBacking: 'readonly',
+  buildMidiFile: 'readonly', midiToTracks: 'readonly', TonoraBacking: 'readonly', TonoraShare: 'readonly', TonoraStore: 'readonly',
+  // node / misc
+  TextEncoder: 'readonly', TextDecoder: 'readonly', Buffer: 'readonly', atob: 'readonly', btoa: 'readonly',
   TonoraNotation: 'readonly', TonoraTheory: 'readonly', midiToNoteName: 'readonly'
 };
 

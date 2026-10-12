@@ -46,7 +46,8 @@ const I18N = {
     eqTitle: 'Equalizer & Chorus FX', eq: 'Equalizer', eqBass: 'Bass', eqMid: 'Mid', eqTreble: 'Treble',
     chorus: 'Chorus', chorusMix: 'Chorus Mix', flat: 'Flat', bassBoost: 'Bass Boost', bright: 'Bright', warm: 'Warm',
     practice: 'Practice', practiceInLearn: 'Practice in Learn Mode', capture: 'Tape',
-    humanize: 'Humanize', quantize: 'Quantize',
+    humanize: 'Humanize', quantize: 'Quantize', waitMode: 'Wait Mode',
+    share: 'Share', shareCopied: 'Link copied!', loadShared: 'Shared song loaded',
     tuning: 'Tuning / Dastgah', standard12tet: 'Standard (12-TET)'
   },
   fa: {
@@ -93,7 +94,8 @@ const I18N = {
     eqTitle: 'اکولایزر و کروس صوتی', eq: 'اکولایزر', eqBass: 'باس', eqMid: 'میدرنج', eqTreble: 'تریبل',
     chorus: 'کروس', chorusMix: 'شدت کروس', flat: 'تخت', bassBoost: 'تقویت باس', bright: 'شفاف', warm: 'گرم',
     practice: 'تمرین', practiceInLearn: 'تمرین در حالت آموزش', capture: 'نوار',
-    humanize: 'انسانی‌سازی', quantize: 'کوانتایز',
+    humanize: 'انسانی‌سازی', quantize: 'کوانتایز', waitMode: 'حالت انتظار',
+    share: 'اشتراک', shareCopied: 'لینک کپی شد!', loadShared: 'آهنگ اشتراکی بارگذاری شد',
     tuning: 'کوک / دستگاه', standard12tet: 'استاندارد (۱۲ نیم‌پرده)'
   }
 };

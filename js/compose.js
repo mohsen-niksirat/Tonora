@@ -92,6 +92,7 @@ const ComposeMode = {
         <button class="btn toggle" id="mute-bass" title="Mute bass">🌈 ${t('bass')}</button>
         <button class="btn" id="cmp-save">${t('save')}</button>
         <button class="btn" id="cmp-export">${t('export')}</button>
+        <button class="btn" id="cmp-share" title="${t('share')}">🔗</button>
         <button class="btn" id="cmp-wav">${t('exportWav')}</button>
         <button class="btn" id="cmp-midi">${t('exportMidi')}</button>
         <button class="btn primary" id="cmp-practice" title="${t('practiceInLearn')}">🎓 ${t('practice')}</button>
@@ -192,6 +193,7 @@ const ComposeMode = {
     wireMute('mute-bass', 'bass');
     root.querySelector('#cmp-save').onclick = () => this.save();
     root.querySelector('#cmp-export').onclick = () => this.exportSong();
+    root.querySelector('#cmp-share').onclick = () => this.shareSong();
     root.querySelector('#cmp-wav').onclick = () => this.exportWav();
     root.querySelector('#cmp-midi').onclick = () => this.exportMidi();
     root.querySelector('#cmp-practice').onclick = () => this.practiceInLearn();
@@ -843,6 +845,47 @@ const ComposeMode = {
       btn.disabled = false;
       btn.textContent = t('exportWav');
     }
+  },
+
+  /* copy a #s= share link to the clipboard, navigate compose to it */
+  shareSong() {
+    try {
+      this.tracks.velocity = this.velocity;
+      const enc = window.TonoraShare.encode(this.tracks, this.bpm, this.steps);
+      const url = location.origin + location.pathname + '#compose?s=' + enc;
+      const done = () => {
+        const b = document.getElementById('cmp-share');
+        if (b) { b.textContent = '✓'; setTimeout(() => { if (b.isConnected) b.textContent = '🔗'; }, 1500); }
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done).catch(() => prompt(t('share'), url));
+      } else {
+        prompt(t('share'), url);
+      }
+      done();
+      TonoraAchievements.unlock('exporter');
+    } catch (e) { /* ignore */ }
+  },
+
+  /* load a shared payload from ?s=<b64> inside the hash (called on enter) */
+  loadShared() {
+    try {
+      const hash = location.hash || '';
+      const m = hash.match(/[?&]s=([A-Za-z0-9\-_]+)/);
+      if (!m) return false;
+      const data = window.TonoraShare.decode(m[1]);
+      if (!data) return false;
+      this.snapshot();
+      this.steps = data.steps || 32;
+      this.bpm = data.bpm || 120;
+      this.tracks = this.normalizeTracks(data.tracks || {});
+      const lenSel = document.getElementById('cmp-len'); if (lenSel) lenSel.value = this.steps;
+      const bpmIn = document.getElementById('cmp-bpm'); if (bpmIn) bpmIn.value = this.bpm;
+      this.buildRoll();
+      if (this.buildMixerUI) this.buildMixerUI();
+      this.updateDuration();
+      return true;
+    } catch (e) { return false; }
   },
 
   exportMidi() {

@@ -54,9 +54,9 @@ function test(name, fn) {
   });
 
   await test('cache version bumped to v23 everywhere', () => {
-    assert.ok(html.includes('css/style.css?v=25'), 'css not bumped');
-    assert.ok(!/[?&]v=22/.test(html), 'stale ?v=25 reference left in index.html');
-    assert.ok(read('sw.js').includes("CACHE = 'tonora-v25'"), 'sw CACHE not bumped');
+    assert.ok(html.includes('css/style.css?v=26'), 'css not bumped');
+    assert.ok(!/[?&]v=22/.test(html), 'stale ?v=26 reference left in index.html');
+    assert.ok(read('sw.js').includes("CACHE = 'tonora-v26'"), 'sw CACHE not bumped');
   });
 
   await test('manifest gained scope/id/lang', () => {
@@ -112,7 +112,7 @@ function test(name, fn) {
   w.TONORA_INSTRUMENTS = JSON.parse(read('data/instruments.json')).instruments;
   w.TONORA_SONGS = JSON.parse(read('data/songs.json')).songs;
 
-  ['i18n.js', 'store.js', 'achievements.js', 'audio.js', 'piano.js', 'play.js', 'learn.js',
+  ['i18n.js', 'store.js', 'share.js', 'achievements.js', 'audio.js', 'piano.js', 'play.js', 'learn.js',
    'backing.js', 'midi.js', 'compose.js', 'theory-content.js', 'notation.js', 'theory.js']
     .forEach(f => inject(read('js/' + f)));
 

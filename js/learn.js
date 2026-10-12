@@ -24,6 +24,7 @@ const LearnMode = {
           <button class="btn toggle" id="learn-backing">🎵 ${t('backing')}</button>
           <button class="btn toggle" id="learn-speed">1×</button>
           <button class="btn toggle" id="learn-ab">🔁 ${t('next8')}</button>
+          <button class="btn toggle" id="learn-wait" title="${t('waitMode')}">⏸ ${t('waitMode')}</button>
           <button class="btn primary" id="learn-skip">⚡ ${t('skipListen')}</button>
           <div class="learn-status" id="learn-status"></div>
           <div class="learn-score" id="learn-score"></div>
@@ -67,6 +68,10 @@ const LearnMode = {
       }
     };
     root.querySelector('#learn-ab').onclick = () => this.toggleRepeat();
+    root.querySelector('#learn-wait').onclick = (e) => {
+      this.waitMode = !this.waitMode;
+      e.currentTarget.classList.toggle('active', this.waitMode);
+    };
   },
 
   /* pick "next 8 unhit notes" as loop range */
@@ -341,14 +346,31 @@ const LearnMode = {
         this._lastBeat = beat;
         this.click(beat % 4 === 0);
       }
-      const win = 400 / this.speed;
-      this.song.notes.forEach((n, i) => {
-        if (!this.hitIdx.has(i) && now > this.startTime + n.t * spb * 1000 + win) {
-          this.hitIdx.add(i);
-          this.combo = 0;
-          this.setStatus(t('miss'));
+      if (this.waitMode) {
+        // Wait Mode (Synthesia-style): the timeline freezes once the NEXT
+        // unhit note reaches the hit line; it stays pending until the user
+        // plays that pitch. Future notes keep approaching but nothing is
+        // counted as a miss while waiting.
+        const firstUnhit = this.song.notes.findIndex((n, i) => !this.hitIdx.has(i));
+        if (firstUnhit >= 0) {
+          const note = this.song.notes[firstUnhit];
+          const holdOffset = 300; // park the note just past the hit line
+          const target = this.startTime + note.t * spb * 1000;
+          if (now > target + holdOffset) {
+            this.startTime = now - note.t * spb * 1000 - holdOffset;
+            this.setStatus(`🎹 ${note.n.replace(/-?\d+$/, '')} — ${t('yourTurn')}`);
+          }
         }
-      });
+      } else {
+        const win = 400 / this.speed;
+        this.song.notes.forEach((n, i) => {
+          if (!this.hitIdx.has(i) && now > this.startTime + n.t * spb * 1000 + win) {
+            this.hitIdx.add(i);
+            this.combo = 0;
+            this.setStatus(t('miss'));
+          }
+        });
+      }
       this.checkCompletion(spb);
     }
     this.draw(now, spb);
@@ -439,6 +461,9 @@ const LearnMode = {
     if (this.piano) { this.piano.destroy(); this.piano = null; }
     const btn = document.getElementById('learn-ab');
     if (btn) { btn.classList.remove('active'); btn.textContent = `🔁 ${t('next8')}`; }
+    const waitBtn = document.getElementById('learn-wait');
+    if (waitBtn) waitBtn.classList.remove('active');
+    this.waitMode = false;
     const skipBtn = document.getElementById('learn-skip');
     if (skipBtn) skipBtn.classList.add('hidden');
     const modal = document.getElementById('learn-modal');

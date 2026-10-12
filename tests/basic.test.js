@@ -5,6 +5,7 @@ const { noteToFreq, NOTE_OFFSET, audioBufferToWav } = require('../js/audio.js');
 const { noteNameToMidi, vlq, buildMidiFile } = require('../js/midi.js');
 const { parseMidiFile, midiToTracks, midiToNoteName } = require('../js/midi.js');
 const { buildBacking, pcToNote, inferKeyRoot, pcOf } = require('../js/backing.js');
+const TonoraShare = require('../js/share.js');
 const { expectedFor, validateAnswer, scaleNotes, chordNotes, noteTranspose, THEORY_LESSONS } = require('../js/theory-content.js');
 
 let passed = 0;
@@ -228,6 +229,33 @@ test('buildMidiFile honors muted and solo track states', () => {
   const parsed = parseMidiFile(bytes);
   assert.ok(!parsed.notes.some(n => n.channel === 0), 'muted melody should not be in MIDI');
   assert.ok(parsed.notes.some(n => n.channel === 1), 'bass should still be in MIDI');
+});
+
+test('TonoraShare round-trips a composition through base64url', () => {
+  const encoded = TonoraShare.encode(
+    { melody: ['C4', null, ['E4', 'G4']], bass: ['C3', null], drums: { kick: [true, false], snare: [false, false], hat: [false, false] }, velocity: 0.85 },
+    120, 32
+  );
+  assert.ok(typeof encoded === 'string' && encoded.length > 0);
+  assert.ok(!/[+/=]/.test(encoded), 'not URL-safe: ' + encoded);
+  const data = TonoraShare.decode(encoded);
+  assert.ok(data, 'decode failed');
+  assert.strictEqual(data.bpm, 120);
+  assert.strictEqual(data.steps, 32);
+  assert.deepStrictEqual(data.tracks.melody, ['C4', null, ['E4', 'G4']]);
+  assert.deepStrictEqual(data.tracks.bass, ['C3', null]);
+  assert.strictEqual(data.tracks.drums.kick[0], true);
+});
+
+test('TonoraShare decode returns null for garbage', () => {
+  assert.strictEqual(TonoraShare.decode('!!!not-valid-base64!!!'), null);
+  assert.strictEqual(TonoraShare.decode(''), null);
+});
+
+test('TonoraShare unicode titles survive via base64 (no char mangling)', () => {
+  const encoded = TonoraShare.encode({ melody: ['C#4', 'D#4'], bass: [], drums: {} }, 100, 16);
+  const data = TonoraShare.decode(encoded);
+  assert.deepStrictEqual(data.tracks.melody, ['C#4', 'D#4']);
 });
 
 if (process.exitCode) {
