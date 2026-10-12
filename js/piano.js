@@ -1,22 +1,84 @@
 /* Tonora — Piano keyboard UI (touch/mouse/PC keyboard) */
 'use strict';
 
-const KEY_MAP = { // PC keyboard → semitone offset from startOctave (C3)
-  'a': 0, 'w': 1, 's': 2, 'e': 3, 'd': 4, 'f': 5, 't': 6, 'g': 7, 'y': 8, 'h': 9, 'u': 10, 'j': 11,
-  'k': 12, 'o': 13, 'l': 14, 'p': 15, ';': 16, "'": 17, '[': 18, ']': 19
+const CODE_MAP = {
+  // Octave 1 (0..11) - Two-Tier lower row (Z-M) + Home-Row aliases
+  'KeyZ': 0, 'KeyA': 0,
+  'KeyS': 1,
+  'KeyX': 2,
+  'KeyD': 3,
+  'KeyC': 4,
+  'KeyV': 5, 'KeyF': 5,
+  'KeyG': 6,
+  'KeyB': 7,
+  'KeyH': 8,
+  'KeyN': 9,
+  'KeyJ': 10,
+  'KeyM': 11,
+
+  // Octave 2 (12..24) - Two-Tier upper row (Q-U) + Home-Row aliases (K-L...)
+  'KeyQ': 12, 'KeyK': 12,
+  'Digit2': 13, 'KeyO': 13,
+  'KeyW': 14, 'KeyL': 14,
+  'Digit3': 15, 'KeyP': 15,
+  'KeyE': 16, 'Semicolon': 16,
+  'KeyR': 17, 'Quote': 17,
+  'Digit5': 18, 'BracketLeft': 18,
+  'KeyT': 19, 'BracketRight': 19,
+  'Digit6': 20, 'Backslash': 20,
+  'KeyY': 21, 'Digit8': 21,
+  'Digit7': 22, 'Digit9': 22,
+  'KeyU': 23, 'Digit0': 23,
+  'KeyI': 24, 'Minus': 24, 'Equal': 24
 };
+
+const KEY_MAP = {
+  // Octave 1 (0..11)
+  'z': 0, 'a': 0,
+  's': 1,
+  'x': 2,
+  'd': 3,
+  'c': 4,
+  'v': 5, 'f': 5,
+  'g': 6,
+  'b': 7,
+  'h': 8,
+  'n': 9,
+  'j': 10,
+  'm': 11,
+
+  // Octave 2 (12..24)
+  'q': 12, 'k': 12,
+  '2': 13, 'o': 13,
+  'w': 14, 'l': 14,
+  '3': 15, 'p': 15,
+  'e': 16, ';': 16,
+  'r': 17, "'": 17,
+  '5': 18, '[': 18,
+  't': 19, ']': 19,
+  '6': 20, '\\': 20,
+  'y': 21, '8': 21,
+  '7': 22, '9': 22,
+  'u': 23, '0': 23,
+  'i': 24, '-': 24, '=': 24,
+
+  // Persian keyboard mappings
+  'ظ': 0, 'ش': 0, 'س': 1, 'ط': 2, 'ی': 3, 'ز': 4, 'ر': 5, 'ب': 5,
+  'ل': 6, 'ذ': 7, 'ا': 8, 'د': 9, 'ت': 10, 'پ': 11,
+  'ض': 12, 'ن': 12, '۲': 13, 'خ': 13, 'ص': 14, 'م': 14, '۳': 15, 'ح': 15,
+  'ث': 16, 'ک': 16, 'ف': 17, 'گ': 17, '۵': 18, 'ج': 18, 'غ': 19, 'چ': 19,
+  '۶': 20, 'ع': 21, '۸': 21, '۷': 22, '۹': 22, 'ه': 23, '۰': 23
+};
+
 const BLACK_MAP = { 0: 'C#', 1: 'D#', 3: 'F#', 4: 'G#', 5: 'A#' };
 
-// Quick reverse lookup for UI hint
+const OFF_TO_KEY = {
+  // Octave 1
+  0: 'Z', 1: 'S', 2: 'X', 3: 'D', 4: 'C', 5: 'V', 6: 'G', 7: 'B', 8: 'H', 9: 'N', 10: 'J', 11: 'M',
+  // Octave 2
+  12: 'Q', 13: '2', 14: 'W', 15: '3', 16: 'E', 17: 'R', 18: '5', 19: 'T', 20: '6', 21: 'Y', 22: '7', 23: 'U', 24: 'I'
+};
 const NOTE_TO_KEY = {};
-const OFF_TO_KEY = {};
-const SEMI_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-for (const [k, off] of Object.entries(KEY_MAP)) {
-  const oct = 3 + Math.floor(off / 12);
-  const n = SEMI_NAMES[off % 12] + oct;
-  if (!NOTE_TO_KEY[n]) NOTE_TO_KEY[n] = k.toUpperCase();
-  if (!OFF_TO_KEY[off]) OFF_TO_KEY[off] = k.toUpperCase();
-}
 
 class PianoUI {
   constructor(container, opts = {}) {
@@ -124,14 +186,17 @@ class PianoUI {
 
   _bindPC() {
     this._pcDown = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       if (e.code === 'Space') {
         e.preventDefault();
         this.setSustain(true);
         return;
       }
       if (e.repeat) return;
-      const off = KEY_MAP[e.key.toLowerCase()];
+      const off = (e.code && CODE_MAP[e.code] !== undefined)
+        ? CODE_MAP[e.code]
+        : (e.key ? KEY_MAP[e.key.toLowerCase()] : undefined);
       if (off === undefined) return;
       const oct = this.startOctave + Math.floor(off / 12);
       const names = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -144,7 +209,9 @@ class PianoUI {
         this.setSustain(false);
         return;
       }
-      const off = KEY_MAP[e.key.toLowerCase()];
+      const off = (e.code && CODE_MAP[e.code] !== undefined)
+        ? CODE_MAP[e.code]
+        : (e.key ? KEY_MAP[e.key.toLowerCase()] : undefined);
       if (off === undefined) return;
       const oct = this.startOctave + Math.floor(off / 12);
       const names = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];

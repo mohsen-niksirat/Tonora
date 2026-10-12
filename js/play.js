@@ -44,55 +44,114 @@ const PlayMode = {
     this.armRevive();
     root.innerHTML = `
       <div class="mode-head">
-        <div class="inst-tabs" id="inst-tabs"></div>
-        <div class="octave-box" id="octave-box">
-          <button class="btn oct-btn" id="oct-down" title="${t('octave')} -">◀</button>
-          <span class="oct-lbl" id="oct-lbl">C${this.octave}–B${this.octave + 1}</span>
-          <button class="btn oct-btn" id="oct-up" title="${t('octave')} +">▶</button>
+        <div class="inst-bar">
+          <button class="inst-scroll-btn" id="inst-scroll-left" title="Scroll left" aria-label="Previous instruments">◀</button>
+          <div class="inst-tabs" id="inst-tabs"></div>
+          <button class="inst-scroll-btn" id="inst-scroll-right" title="Scroll right" aria-label="Next instruments">▶</button>
         </div>
-        <select class="btn" id="tuning-sel" title="${t('tuning')}" style="font-size:0.8rem; padding:0.35rem 0.5rem">
-          <option value="">🎵 ${t('standard12tet')}</option>
-          <option value="shur">🇮🇷 شور (Shur: Ep, Ap)</option>
-          <option value="segah">🇮🇷 سه‌گاه (Segah: Ep, Bp)</option>
-          <option value="homayoun">🇮🇷 همایون (Homayoun: Ep)</option>
-          <option value="esfahan">🇮🇷 بیات اصفهان (Esfahan: Ep)</option>
-          <option value="chahargah">🇮🇷 چهارگاه (Chahargah: Ep, Ap)</option>
-        </select>
-        <select class="btn" id="chord-sel" title="${t('chords')}" style="font-size:0.8rem; padding:0.35rem 0.5rem">
-          <option value="">🎹 ${t('singleNotes')}</option>
-          <option value="maj">Major (ماژور)</option>
-          <option value="min">Minor (مینور)</option>
-          <option value="7">7th (هفت)</option>
-          <option value="sus4">Sus4</option>
-          <option value="maj7">Maj7</option>
-          <option value="min7">Min7</option>
-        </select>
-        <select class="btn" id="scale-sel" title="${t('scaleGuide')}" style="font-size:0.8rem; padding:0.35rem 0.5rem">
-          <option value="">🎼 ${t('allKeys')}</option>
-          <option value="major">Major (C)</option>
-          <option value="minor">Minor (A)</option>
-          <option value="pentatonic">Pentatonic</option>
-          <option value="blues">Blues</option>
-          <option value="shur">دستگاه شور (Shur)</option>
-          <option value="segah">دستگاه سه‌گاه (Segah)</option>
-          <option value="homayoun">دستگاه همایون (Homayoun)</option>
-          <option value="esfahan">بیات اصفهان (Esfahan)</option>
-          <option value="chahargah">دستگاه چهارگاه (Chahargah)</option>
-        </select>
-        <button class="btn toggle-btn" id="sustain-btn" title="Space">🦶 ${t('sustain')}</button>
-        <button class="btn toggle-btn" id="arp-btn" title="Hold notes to arpeggiate">🎶 Arp</button>
-        <button class="btn" id="rec-btn" title="Record live session">⏺ ${t('record')}</button>
-        <div class="midi-box hidden" id="midi-box"></div>
+        <div class="play-controls">
+          <div class="octave-box" id="octave-box">
+            <button class="btn oct-btn" id="oct-down" title="${t('octave')} -">◀</button>
+            <span class="oct-lbl" id="oct-lbl">C${this.octave}–B${this.octave + 1}</span>
+            <button class="btn oct-btn" id="oct-up" title="${t('octave')} +">▶</button>
+          </div>
+          <select class="btn" id="tuning-sel" title="${t('tuning')}" style="font-size:0.8rem; padding:0.35rem 0.5rem">
+            <option value="">🎵 ${t('standard12tet')}</option>
+            <option value="shur">🇮🇷 شور (Shur: Ep, Ap)</option>
+            <option value="segah">🇮🇷 سه‌گاه (Segah: Ep, Bp)</option>
+            <option value="homayoun">🇮🇷 همایون (Homayoun: Ep)</option>
+            <option value="esfahan">🇮🇷 بیات اصفهان (Esfahan: Ep)</option>
+            <option value="chahargah">🇮🇷 چهارگاه (Chahargah: Ep, Ap)</option>
+          </select>
+          <select class="btn" id="chord-sel" title="${t('chords')}" style="font-size:0.8rem; padding:0.35rem 0.5rem">
+            <option value="">🎹 ${t('singleNotes')}</option>
+            <option value="maj">Major (ماژور)</option>
+            <option value="min">Minor (مینور)</option>
+            <option value="7">7th (هفت)</option>
+            <option value="sus4">Sus4</option>
+            <option value="maj7">Maj7</option>
+            <option value="min7">Min7</option>
+          </select>
+          <select class="btn" id="scale-sel" title="${t('scaleGuide')}" style="font-size:0.8rem; padding:0.35rem 0.5rem">
+            <option value="">🎼 ${t('allKeys')}</option>
+            <option value="major">Major (C)</option>
+            <option value="minor">Minor (A)</option>
+            <option value="pentatonic">Pentatonic</option>
+            <option value="blues">Blues</option>
+            <option value="shur">دستگاه شور (Shur)</option>
+            <option value="segah">دستگاه سه‌گاه (Segah)</option>
+            <option value="homayoun">دستگاه همایون (Homayoun)</option>
+            <option value="esfahan">بیات اصفهان (Esfahan)</option>
+            <option value="chahargah">دستگاه چهارگاه (Chahargah)</option>
+          </select>
+          <button class="btn toggle-btn" id="sustain-btn" title="Space">🦶 ${t('sustain')}</button>
+          <button class="btn toggle-btn" id="arp-btn" title="Hold notes to arpeggiate">🎶 Arp</button>
+          <button class="btn" id="rec-btn" title="Record live session">⏺ ${t('record')}</button>
+          <div class="midi-box hidden" id="midi-box"></div>
+        </div>
       </div>
       <div id="play-surface" class="play-surface"></div>
     `;
     const tabs = root.querySelector('#inst-tabs');
+    const scrollLeftBtn = root.querySelector('#inst-scroll-left');
+    const scrollRightBtn = root.querySelector('#inst-scroll-right');
+    if (scrollLeftBtn && tabs) {
+      scrollLeftBtn.onclick = () => tabs.scrollBy({ left: -220, behavior: 'smooth' });
+    }
+    if (scrollRightBtn && tabs) {
+      scrollRightBtn.onclick = () => tabs.scrollBy({ left: 220, behavior: 'smooth' });
+    }
+
+    if (tabs) {
+      tabs.addEventListener('wheel', (e) => {
+        if (e.deltaY !== 0) {
+          e.preventDefault();
+          tabs.scrollLeft += e.deltaY;
+        }
+      }, { passive: false });
+
+      let isDown = false;
+      let startX = 0;
+      let scrollStart = 0;
+      let dragged = false;
+
+      tabs.addEventListener('mousedown', (e) => {
+        isDown = true;
+        dragged = false;
+        tabs.classList.add('grabbing');
+        startX = e.pageX - tabs.offsetLeft;
+        scrollStart = tabs.scrollLeft;
+      });
+
+      const onMouseUp = () => {
+        if (!isDown) return;
+        isDown = false;
+        tabs.classList.remove('grabbing');
+        setTimeout(() => { dragged = false; }, 50);
+      };
+      window.addEventListener('mouseup', onMouseUp);
+      this._cleanupTabsDrag = () => window.removeEventListener('mouseup', onMouseUp);
+
+      tabs.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        const x = e.pageX - tabs.offsetLeft;
+        const walk = x - startX;
+        if (Math.abs(walk) > 5) dragged = true;
+        tabs.scrollLeft = scrollStart - walk;
+      });
+
+      this._isTabsDragged = () => dragged;
+    }
+
     (window.TONORA_INSTRUMENTS || []).forEach(inst => {
       const b = document.createElement('button');
       b.className = 'inst-tab';
       b.dataset.id = inst.id;
       b.innerHTML = `<span>${inst.icon}</span> ${inst.name[getLang()] || inst.name.en}`;
-      b.onclick = () => this.select(inst.id);
+      b.onclick = () => {
+        if (this._isTabsDragged && this._isTabsDragged()) return;
+        this.select(inst.id);
+      };
       tabs.appendChild(b);
     });
     root.querySelector('#oct-down').onclick = () => {
@@ -199,6 +258,10 @@ const PlayMode = {
     const inst = this.inst(id) || { id, type: 'synth' };
     this.current = id;
     document.querySelectorAll('.inst-tab').forEach(b => b.classList.toggle('active', b.dataset.id === id));
+    const activeTab = document.querySelector(`.inst-tab[data-id="${id}"]`);
+    if (activeTab && typeof activeTab.scrollIntoView === 'function') {
+      activeTab.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+    }
     const surf = document.getElementById('play-surface');
     const octBox = document.getElementById('octave-box');
     if (octBox) octBox.classList.toggle('hidden', inst.type === 'drumkit');
@@ -361,6 +424,7 @@ const PlayMode = {
   leave() {
     if (this.piano) { this.piano.destroy(); this.piano = null; }
     if (this._cleanupDrumKeys) { this._cleanupDrumKeys(); this._cleanupDrumKeys = null; }
+    if (this._cleanupTabsDrag) { this._cleanupTabsDrag(); this._cleanupTabsDrag = null; }
     if (this.midi && this.midi.input) this.midi.input.onmidimessage = null;
     if (this.arpTimer) { clearInterval(this.arpTimer); this.arpTimer = null; }
     this.arpActive = false;

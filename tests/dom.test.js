@@ -229,6 +229,59 @@ test('PlayMode renders Tonbak drum pads and handles stroke trigger', () => {
   root.remove();
 });
 
+test('PlayMode includes scroll buttons and inst-bar for instruments', () => {
+  const root = window.document.createElement('div');
+  window.document.body.appendChild(root);
+  const PM = window.__test.PlayMode;
+  PM.enter(root);
+  const scrollLeft = root.querySelector('#inst-scroll-left');
+  const scrollRight = root.querySelector('#inst-scroll-right');
+  const tabs = root.querySelector('#inst-tabs');
+  assert.ok(scrollLeft, '#inst-scroll-left missing');
+  assert.ok(scrollRight, '#inst-scroll-right missing');
+  assert.ok(tabs, '#inst-tabs missing');
+  PM.leave();
+  root.remove();
+});
+
+test('PianoUI has keyboard shortcuts across both octaves and responds to keyboard events', () => {
+  const container = window.document.createElement('div');
+  window.document.body.appendChild(container);
+  const played = [];
+  const piano = new window.__test.PianoUI(container, {
+    octaves: 2,
+    startOctave: 3,
+    onNote: (n) => played.push(n)
+  });
+  // Check key hints exist across first and second octaves
+  assert.ok(piano.keys['C3'].textContent.includes('Z'));
+  assert.ok(piano.keys['C#3'].textContent.includes('S'));
+  assert.ok(piano.keys['B3'].textContent.includes('M'));
+  assert.ok(piano.keys['C4'].textContent.includes('Q'));
+  assert.ok(piano.keys['C#4'].textContent.includes('2'));
+  assert.ok(piano.keys['G#4'].textContent.includes('6'));
+  assert.ok(piano.keys['A4'].textContent.includes('Y'));
+  assert.ok(piano.keys['A#4'].textContent.includes('7'));
+  assert.ok(piano.keys['B4'].textContent.includes('U'));
+
+  // Test keyboard events via code and key
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { code: 'KeyZ', key: 'z' }));
+  assert.strictEqual(played[played.length - 1], 'C3');
+
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { code: 'Digit2', key: '2' }));
+  assert.strictEqual(played[played.length - 1], 'C#4');
+
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { code: 'KeyU', key: 'u' }));
+  assert.strictEqual(played[played.length - 1], 'B4');
+
+  // Test Persian character mapping
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { code: 'KeyQ', key: 'ض' }));
+  assert.strictEqual(played[played.length - 1], 'C4');
+
+  piano.destroy();
+  container.remove();
+});
+
 if (process.exitCode) {
   console.error(`\n${passed} passed, some failed.`);
 } else {

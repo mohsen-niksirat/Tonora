@@ -57,12 +57,12 @@ try {
     <div class="kb-table-wrap">
       <table class="kb-table">
         <tr><th>Key</th><th>Action</th></tr>
-        <tr><td><kbd>A</kbd>, <kbd>S</kbd>, <kbd>D</kbd>, <kbd>F</kbd>, <kbd>G</kbd>, <kbd>H</kbd>, <kbd>J</kbd></td><td>First Octave (White keys)</td></tr>
-        <tr><td><kbd>W</kbd>, <kbd>E</kbd>, <kbd>T</kbd>, <kbd>Y</kbd>, <kbd>U</kbd></td><td>First Octave (Black keys)</td></tr>
-        <tr><td><kbd>K</kbd>, <kbd>L</kbd>, <kbd>;</kbd>, <kbd>'</kbd>...</td><td>Second Octave (White keys)</td></tr>
-        <tr><td><kbd>O</kbd>, <kbd>P</kbd>...</td><td>Second Octave (Black keys)</td></tr>
+        <tr><td><kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd> <kbd>V</kbd> <kbd>B</kbd> <kbd>N</kbd> <kbd>M</kbd> (or <kbd>A</kbd>)</td><td>Octave 1 White Keys (C–B)</td></tr>
+        <tr><td><kbd>S</kbd> <kbd>D</kbd> <kbd>G</kbd> <kbd>H</kbd> <kbd>J</kbd> (or <kbd>W</kbd> <kbd>E</kbd>...)</td><td>Octave 1 Black Keys (C#–A#)</td></tr>
+        <tr><td><kbd>Q</kbd> <kbd>W</kbd> <kbd>E</kbd> <kbd>R</kbd> <kbd>T</kbd> <kbd>Y</kbd> <kbd>U</kbd> (or <kbd>K</kbd> <kbd>L</kbd>...)</td><td>Octave 2 White Keys (C–B)</td></tr>
+        <tr><td><kbd>2</kbd> <kbd>3</kbd> <kbd>5</kbd> <kbd>6</kbd> <kbd>7</kbd> (or <kbd>O</kbd> <kbd>P</kbd>...)</td><td>Octave 2 Black Keys (C#–A#)</td></tr>
         <tr><td><kbd>Space</kbd></td><td>Toggle Sustain Pedal</td></tr>
-        <tr><td><kbd>1</kbd>–<kbd>6</kbd> / <kbd>Z</kbd>–<kbd>N</kbd> (Drums)</td><td>Trigger Drum Pads</td></tr>
+        <tr><td><kbd>1</kbd>–<kbd>6</kbd> / <kbd>Z</kbd>–<kbd>N</kbd></td><td>Trigger Drum &amp; Tonbak Pads</td></tr>
       </table>
     </div>
   </div>
@@ -230,14 +230,52 @@ document.getElementById('lang-btn').onclick = () => {
   localStorage.setItem('tonora-lang', applyLangUI._l);
   location.reload();
 };
+const THEMES = [
+  { id: 'dark', icon: '🌙', name: { en: 'Dark Indigo', fa: 'تیره' }, color: '#0f1220' },
+  { id: 'light', icon: '☀️', name: { en: 'Clean Pearl', fa: 'روشن' }, color: '#f4f6fc' },
+  { id: 'synthwave', icon: '🌆', name: { en: 'Neon Synthwave', fa: 'نئون سایبرپانک' }, color: '#0d0221' },
+  { id: 'persian', icon: '🕌', name: { en: 'Persian Turquoise', fa: 'فیروزه‌ای ایرانی' }, color: '#081b24' },
+  { id: 'oled', icon: '🖤', name: { en: 'Midnight OLED', fa: 'مشکی خالص' }, color: '#000000' },
+  { id: 'vintage', icon: '📻', name: { en: 'Vintage Studio', fa: 'کهربایی کلاسیک' }, color: '#1c1917' }
+];
+
+function showThemeToast(msg) {
+  const existing = document.querySelector('.theme-toast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.className = 'ach-toast theme-toast';
+  toast.innerHTML = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.classList.add('show'), 30);
+  setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 2200);
+}
+
+function applyTheme(themeId, toast = false) {
+  const tObj = THEMES.find(t => t.id === themeId) || THEMES[0];
+  document.documentElement.dataset.theme = tObj.id;
+  localStorage.setItem('tonora-theme', tObj.id);
+  const meta = document.querySelector('meta[name=theme-color]');
+  if (meta) meta.content = tObj.color;
+  const btn = document.getElementById('theme-btn');
+  const lang = (typeof getLang === 'function') ? getLang() : 'en';
+  const themeName = tObj.name[lang] || tObj.name.en;
+  if (btn) {
+    btn.textContent = tObj.icon;
+    btn.title = `${t('theme')}: ${themeName}`;
+  }
+  if (toast) {
+    showThemeToast(`<span class="big">${tObj.icon}</span> ${themeName}`);
+  }
+}
+
 document.getElementById('theme-btn').onclick = () => {
-  const h = document.documentElement;
-  h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
-  localStorage.setItem('tonora-theme', h.dataset.theme);
-  document.querySelector('meta[name=theme-color]').content = h.dataset.theme === 'dark' ? '#0f1220' : '#f2f4fb';
+  const current = document.documentElement.dataset.theme || 'dark';
+  const idx = THEMES.findIndex(t => t.id === current);
+  const next = THEMES[(idx + 1) % THEMES.length];
+  applyTheme(next.id, true);
 };
-const savedTheme = localStorage.getItem('tonora-theme');
-if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+const savedTheme = localStorage.getItem('tonora-theme') || 'dark';
+applyTheme(savedTheme, false);
 
 // Volume control
 const volSlider = document.getElementById('vol-slider');
