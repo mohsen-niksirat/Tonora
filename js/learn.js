@@ -105,7 +105,10 @@ const LearnMode = {
     document.getElementById('song-list').classList.add('hidden');
     document.getElementById('learn-stage').classList.remove('hidden');
     const surf = document.getElementById('learn-piano');
-    this.piano = new PianoUI(surf, { octaves: 2, startOctave: 3, onNote: (n) => this.onUserNote(n) });
+    const octs = (song.notes || []).map(n => parseInt(String(n.n).slice(-1), 10)).filter(o => !isNaN(o));
+    const minOct = octs.length ? Math.min(...octs) : 3;
+    const startOct = Math.max(1, Math.min(4, minOct));
+    this.piano = new PianoUI(surf, { octaves: 2, startOctave: startOct, onNote: (n) => this.onUserNote(n) });
     const inst = window.TONORA_INSTRUMENTS.find(i => i.id === 'piano');
     this.inst = inst;
     this.setupCanvas();

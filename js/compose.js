@@ -83,6 +83,7 @@ const ComposeMode = {
         <button class="btn" id="cmp-export">${t('export')}</button>
         <button class="btn" id="cmp-wav">${t('exportWav')}</button>
         <button class="btn" id="cmp-midi">${t('exportMidi')}</button>
+        <button class="btn primary" id="cmp-practice" title="${t('practiceInLearn')}">🎓 ${t('practice')}</button>
         <label class="btn file-btn">${t('import')}<input type="file" id="cmp-import" accept=".json" hidden></label>
         <label class="btn file-btn">🎼 ${t('importMidi')}<input type="file" id="cmp-import-midi" accept=".mid,.midi,audio/midi" hidden></label>
         <select class="btn" id="cmp-projects" title="${t('projects')}" style="font-size:0.8rem; padding:0.35rem 0.5rem">
@@ -176,6 +177,7 @@ const ComposeMode = {
     root.querySelector('#cmp-export').onclick = () => this.exportSong();
     root.querySelector('#cmp-wav').onclick = () => this.exportWav();
     root.querySelector('#cmp-midi').onclick = () => this.exportMidi();
+    root.querySelector('#cmp-practice').onclick = () => this.practiceInLearn();
     root.querySelector('#cmp-import').onchange = e => this.importSong(e.target.files[0]);
     root.querySelector('#cmp-import-midi').onchange = e => { this.importMidi(e.target.files[0]); e.target.value = ''; };
     const projSel = root.querySelector('#cmp-projects');
@@ -723,6 +725,67 @@ const ComposeMode = {
       TonoraAchievements.unlock('exporter');
     } catch (e) {
       alert('MIDI export failed');
+    }
+  },
+
+  toSongObject() {
+    const notes = [];
+    const durBeats = 0.25; // 16th note step = 0.25 beats
+    for (let s = 0; s < this.steps; s++) {
+      const mel = this.tracks && this.tracks.melody ? this.tracks.melody[s] : null;
+      if (mel) {
+        if (Array.isArray(mel)) {
+          mel.forEach(n => notes.push({ n, t: s * durBeats, d: durBeats }));
+        } else {
+          notes.push({ n: mel, t: s * durBeats, d: durBeats });
+        }
+      }
+    }
+    // If melody is empty, fallback to bass track
+    if (!notes.length && this.tracks && this.tracks.bass) {
+      for (let s = 0; s < this.steps; s++) {
+        const b = this.tracks.bass[s];
+        if (b) {
+          if (Array.isArray(b)) {
+            b.forEach(n => notes.push({ n, t: s * durBeats, d: durBeats }));
+          } else {
+            notes.push({ n: b, t: s * durBeats, d: durBeats });
+          }
+        }
+      }
+    }
+    if (!notes.length) return null;
+    notes.sort((a, b) => a.t - b.t);
+    return {
+      id: 'custom-' + Date.now(),
+      title: {
+        en: 'My Composition',
+        fa: 'قطعه ساخته‌شده'
+      },
+      composer: (typeof getLang === 'function' && getLang() === 'fa') ? 'شما' : 'You',
+      difficulty: 1,
+      bpm: this.bpm || 120,
+      notes
+    };
+  },
+
+  practiceInLearn() {
+    this.stop();
+    const song = this.toSongObject();
+    if (!song) {
+      const msg = (typeof getLang === 'function' && getLang() === 'fa')
+        ? 'ابتدا چند نت در پیانورول قرار دهید!'
+        : 'Add some notes to the piano roll first!';
+      if (typeof alert === 'function') alert(msg);
+      return;
+    }
+    if (typeof window !== 'undefined' && typeof window.navigateTo === 'function') {
+      window.navigateTo('learn');
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && window.LearnMode && window.LearnMode.start) {
+          window.LearnMode.start(song);
+        }
+      }, 50);
     }
   },
 

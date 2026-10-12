@@ -43,7 +43,8 @@ const I18N = {
     whatDidYouHear: 'What did you hear?', listenAgain: 'Listen again', bestScore: 'Best',
     chords: 'Chords', singleNotes: 'Single', scaleGuide: 'Scale Guide', allKeys: 'All Keys',
     eqTitle: 'Equalizer & Chorus FX', eq: 'Equalizer', eqBass: 'Bass', eqMid: 'Mid', eqTreble: 'Treble',
-    chorus: 'Chorus', chorusMix: 'Chorus Mix', flat: 'Flat', bassBoost: 'Bass Boost', bright: 'Bright', warm: 'Warm'
+    chorus: 'Chorus', chorusMix: 'Chorus Mix', flat: 'Flat', bassBoost: 'Bass Boost', bright: 'Bright', warm: 'Warm',
+    practice: 'Practice', practiceInLearn: 'Practice in Learn Mode'
   },
   fa: {
     play: 'اجرا', learn: 'آموزش', compose: 'آهنگسازی', theory: 'تئوری',
@@ -86,7 +87,8 @@ const I18N = {
     whatDidYouHear: 'چه شنیدی؟', listenAgain: 'دوباره گوش کن', bestScore: 'بهترین',
     chords: 'آکوردها', singleNotes: 'تک‌نت', scaleGuide: 'راهنمای گام', allKeys: 'همه کلیدها',
     eqTitle: 'اکولایزر و کروس صوتی', eq: 'اکولایزر', eqBass: 'باس', eqMid: 'میدرنج', eqTreble: 'تریبل',
-    chorus: 'کروس', chorusMix: 'شدت کروس', flat: 'تخت', bassBoost: 'تقویت باس', bright: 'شفاف', warm: 'گرم'
+    chorus: 'کروس', chorusMix: 'شدت کروس', flat: 'تخت', bassBoost: 'تقویت باس', bright: 'شفاف', warm: 'گرم',
+    practice: 'تمرین', practiceInLearn: 'تمرین در حالت آموزش'
   }
 };
 

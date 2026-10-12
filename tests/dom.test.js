@@ -90,6 +90,26 @@ test('ComposeMode.stepDur matches a sixteenth note', () => {
   assert.ok(Math.abs(CM.stepDur() - 60 / 120 / 4) < 1e-9);
 });
 
+test('ComposeMode.toSongObject bridges sequencer steps into falling notes song', () => {
+  const CM = window.__test.ComposeMode;
+  CM.steps = 16;
+  CM.bpm = 100;
+  CM.tracks = {
+    melody: ['C4', null, 'E4', null, ['G4', 'B4'], null, null, null, null, null, null, null, null, null, null, null],
+    bass: new Array(16).fill(null),
+    drums: { kick: new Array(16).fill(false), snare: new Array(16).fill(false), hat: new Array(16).fill(false) }
+  };
+  const song = CM.toSongObject();
+  assert.ok(song, 'song should not be null');
+  assert.strictEqual(song.bpm, 100);
+  assert.strictEqual(song.notes.length, 4);
+  assert.strictEqual(song.notes[0].n, 'C4');
+  assert.strictEqual(song.notes[0].t, 0);
+  assert.strictEqual(song.notes[1].n, 'E4');
+  assert.strictEqual(song.notes[1].t, 0.5);
+  assert.strictEqual(song.notes[2].t, 1.0);
+});
+
 test('backing generator runs inside the browser scope', () => {
   const song = { notes: [{ n: 'C4', t: 0, d: 4 }] };
   const res = window.__test.TonoraBacking.buildBacking(song);
