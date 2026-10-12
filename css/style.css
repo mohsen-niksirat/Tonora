@@ -162,10 +162,27 @@ main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width
   box-shadow: inset 0 0 10px rgba(255,255,255,0.2), 0 0 20px var(--danger);
 }
 .key.black.hint { background: #d9a441; }
-.key-label { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); font-size: .62rem; color: #888; pointer-events: none; text-align: center; line-height: 1.1; }
-.key.black .key-label { color: #aaa; bottom: 4px; }
-.pc-hint { display: block; font-size: .52rem; opacity: .75; font-family: monospace; font-weight: 600; margin-top: 1px; }
-.key.black .pc-hint { color: #ccc; }
+.key-label {
+  position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%);
+  font-size: .72rem; font-weight: 700; color: #475569; pointer-events: none;
+  text-align: center; line-height: 1.15;
+}
+.key.black .key-label {
+  color: #f1f5f9; bottom: 5px; font-size: .66rem;
+}
+.pc-hint {
+  display: block; font-size: .76rem; font-family: system-ui, -apple-system, monospace;
+  font-weight: 800; color: var(--accent); margin-top: 2px;
+  background: rgba(108, 140, 255, 0.15);
+  border-radius: 3px; padding: 0 3px; line-height: 1.1;
+  box-shadow: 0 0 0 1px rgba(108, 140, 255, 0.25);
+}
+.key.black .pc-hint {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.2);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.35);
+  font-size: .7rem;
+}
 .key.scale-hint::after {
   content: ''; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
   width: 5px; height: 5px; border-radius: 50%; background: var(--accent);

@@ -278,7 +278,29 @@ test('PianoUI has keyboard shortcuts across both octaves and responds to keyboar
   window.dispatchEvent(new window.KeyboardEvent('keydown', { code: 'KeyQ', key: 'ض' }));
   assert.strictEqual(played[played.length - 1], 'C4');
 
-  piano.destroy();
+  // Test 3-octave piano (Theory Mode layout)
+  const p3 = new window.__test.PianoUI(container, {
+    octaves: 3,
+    startOctave: 3,
+    onNote: (n) => played.push(n)
+  });
+  // Check key hints exist across third octave
+  assert.ok(p3.keys['C5'].textContent.includes('I'));
+  assert.ok(p3.keys['C#5'].textContent.includes('8'));
+  assert.ok(p3.keys['D5'].textContent.includes('O'));
+  assert.ok(p3.keys['D#5'].textContent.includes('9'));
+  assert.ok(p3.keys['E5'].textContent.includes('P'));
+  assert.ok(p3.keys['F5'].textContent.includes('['));
+  assert.ok(p3.keys['G5'].textContent.includes(']'));
+  assert.ok(p3.keys['B5'].textContent.includes(';'));
+
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { code: 'KeyI', key: 'i' }));
+  assert.strictEqual(played[played.length - 1], 'C5');
+
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { code: 'Digit8', key: '8' }));
+  assert.strictEqual(played[played.length - 1], 'C#5');
+
+  p3.destroy();
   container.remove();
 });
 
