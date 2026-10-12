@@ -9,11 +9,13 @@ const BLACK_MAP = { 0: 'C#', 1: 'D#', 3: 'F#', 4: 'G#', 5: 'A#' };
 
 // Quick reverse lookup for UI hint
 const NOTE_TO_KEY = {};
+const OFF_TO_KEY = {};
 const SEMI_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 for (const [k, off] of Object.entries(KEY_MAP)) {
   const oct = 3 + Math.floor(off / 12);
   const n = SEMI_NAMES[off % 12] + oct;
   if (!NOTE_TO_KEY[n]) NOTE_TO_KEY[n] = k.toUpperCase();
+  if (!OFF_TO_KEY[off]) OFF_TO_KEY[off] = k.toUpperCase();
 }
 
 class PianoUI {
@@ -39,18 +41,20 @@ class PianoUI {
       for (let w = 0; w < 7; w++) {
         const oct = this.startOctave + o;
         const note = ['C','D','E','F','G','A','B'][w] + oct;
-        whites.push({ note, idx: o * 7 + w, oct, w });
+        whites.push({ note, idx: o * 7 + w, oct, w, o });
       }
     }
     const totalWhites = whites.length;
 
-    whites.forEach(({ note, idx, oct, w }) => {
+    whites.forEach(({ note, idx, oct, w, o }) => {
       const k = document.createElement('div');
       k.className = 'key white';
       k.dataset.note = note;
       k.setAttribute('role', 'button');
       k.setAttribute('aria-label', note);
-      const keyHint = NOTE_TO_KEY[note] ? `<small class="pc-hint">${NOTE_TO_KEY[note]}</small>` : '';
+      const whiteOff = [0, 2, 4, 5, 7, 9, 11][w] + o * 12;
+      const pcHint = OFF_TO_KEY[whiteOff] || NOTE_TO_KEY[note] || '';
+      const keyHint = pcHint ? `<small class="pc-hint">${pcHint}</small>` : '';
       k.innerHTML = `<span class="key-label">${note}${keyHint}</span>`;
       this.container.appendChild(k);
       this.keys[note] = k;
@@ -63,7 +67,9 @@ class PianoUI {
         bk.dataset.note = bn;
         bk.setAttribute('role', 'button');
         bk.setAttribute('aria-label', bn);
-        const bHint = NOTE_TO_KEY[bn] ? `<small class="pc-hint">${NOTE_TO_KEY[bn]}</small>` : '';
+        const blackOff = { 0: 1, 1: 3, 3: 6, 4: 8, 5: 10 }[w] + o * 12;
+        const bPcHint = OFF_TO_KEY[blackOff] || NOTE_TO_KEY[bn] || '';
+        const bHint = bPcHint ? `<small class="pc-hint">${bPcHint}</small>` : '';
         bk.innerHTML = `<span class="key-label">${bn}${bHint}</span>`;
         // Position at the boundary between this white key and the next
         bk.style.left = `calc(6px + (100% - 12px) * ${(idx + 1) / totalWhites})`;
@@ -84,20 +90,31 @@ class PianoUI {
       const note = el.dataset.note;
       if (note) this.release(note, el);
     };
+    const attachRel = (el) => {
+      const rel = () => {
+        up(el);
+        window.removeEventListener('pointerup', rel);
+        window.removeEventListener('pointercancel', rel);
+        el.removeEventListener('pointerleave', rel);
+      };
+      window.addEventListener('pointerup', rel, { once: true });
+      window.addEventListener('pointercancel', rel, { once: true });
+      el.addEventListener('pointerleave', rel, { once: true });
+    };
     this.container.addEventListener('pointerdown', e => {
       const el = e.target.closest('.key');
       if (!el) return;
-      try { el.setPointerCapture(e.pointerId); } catch (err) {}
       down(el);
-      const rel = () => { up(el); el.removeEventListener('pointerup', rel); el.removeEventListener('pointercancel', rel); };
-      el.addEventListener('pointerup', rel);
-      el.addEventListener('pointercancel', rel);
+      attachRel(el);
     });
     // glissando: slide across keys while pressed
     this.container.addEventListener('pointerover', e => {
       if (e.buttons === 0) return;
       const el = e.target.closest('.key');
-      if (el) down(el);
+      if (el) {
+        down(el);
+        attachRel(el);
+      }
     });
   }
 

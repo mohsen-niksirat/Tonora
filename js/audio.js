@@ -659,6 +659,9 @@ async function renderCompositionToWav(tracks, bpm, steps, swing) {
   };
   mkBus('melody'); mkBus('bass'); mkBus('drums');
 
+  const soloed = tracks.solo && Object.values(tracks.solo).some(Boolean);
+  const audible = (track) => soloed ? !!tracks.solo[track] : !(tracks.muted && tracks.muted[track]);
+
   let currentWhen = 0;
   for (let s = 0; s < steps; s++) {
     const when = currentWhen;
@@ -667,23 +670,25 @@ async function renderCompositionToWav(tracks, bpm, steps, swing) {
     currentWhen += dur;
 
     const mel = tracks.melody[s];
-    if (mel) {
+    if (mel && audible('melody')) {
       const notesArr = Array.isArray(mel) ? mel : [mel];
       notesArr.forEach(n => eng.scheduleNote(off, buses.melody, null, inst('piano'), n, dur * 2, vel, when, {}, null));
     }
     const bass = tracks.bass[s];
-    if (bass) {
+    if (bass && audible('bass')) {
       const notesArr = Array.isArray(bass) ? bass : [bass];
       notesArr.forEach(n => eng.scheduleNote(off, buses.bass, null, inst('synth'), n, dur * 3, vel, when, {}, null));
     }
 
     // Check old style single drum array, or new style dict
-    if (tracks.drums[s] === true) {
-      eng.scheduleDrum(off, buses.drums, null, inst('drums'), s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel, when, {}, null);
-    } else if (typeof tracks.drums === 'object' && !Array.isArray(tracks.drums)) {
-      if (tracks.drums.kick && tracks.drums.kick[s]) eng.scheduleDrum(off, buses.drums, null, inst('drums'), 'kick', vel, when, {}, null);
-      if (tracks.drums.snare && tracks.drums.snare[s]) eng.scheduleDrum(off, buses.drums, null, inst('drums'), 'snare', vel, when, {}, null);
-      if (tracks.drums.hat && tracks.drums.hat[s]) eng.scheduleDrum(off, buses.drums, null, inst('drums'), 'hat', vel, when, {}, null);
+    if (audible('drums')) {
+      if (tracks.drums[s] === true) {
+        eng.scheduleDrum(off, buses.drums, null, inst('drums'), s % 8 === 0 ? 'kick' : (s % 4 === 2 ? 'snare' : 'hat'), vel, when, {}, null);
+      } else if (typeof tracks.drums === 'object' && !Array.isArray(tracks.drums)) {
+        if (tracks.drums.kick && tracks.drums.kick[s]) eng.scheduleDrum(off, buses.drums, null, inst('drums'), 'kick', vel, when, {}, null);
+        if (tracks.drums.snare && tracks.drums.snare[s]) eng.scheduleDrum(off, buses.drums, null, inst('drums'), 'snare', vel, when, {}, null);
+        if (tracks.drums.hat && tracks.drums.hat[s]) eng.scheduleDrum(off, buses.drums, null, inst('drums'), 'hat', vel, when, {}, null);
+      }
     }
   }
   const rendered = await off.startRendering();

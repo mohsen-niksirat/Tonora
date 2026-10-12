@@ -190,6 +190,24 @@ test('every curriculum lesson has a resolvable answer', () => {
   assert.ok(earIds.includes('ear-intervals') && earIds.includes('ear-chords'), 'ear lessons missing');
 });
 
+test('noteTranspose accurately handles octave jumps (8P and wrapping)', () => {
+  assert.strictEqual(noteTranspose('C4', '8P'), 'C5');
+  assert.strictEqual(noteTranspose('G4', '6M'), 'E5');
+});
+
+test('buildMidiFile honors muted and solo track states', () => {
+  const tracks = {
+    melody: ['C4', null],
+    bass: [null, 'C3'],
+    drums: { kick: [true, false], snare: [false, false], hat: [false, false] },
+    muted: { melody: true, drums: false, bass: false }
+  };
+  const bytes = buildMidiFile(tracks, 120, 2, false);
+  const parsed = parseMidiFile(bytes);
+  assert.ok(!parsed.notes.some(n => n.channel === 0), 'muted melody should not be in MIDI');
+  assert.ok(parsed.notes.some(n => n.channel === 1), 'bass should still be in MIDI');
+});
+
 if (process.exitCode) {
   console.error(`\n${passed} passed, some failed.`);
 } else {

@@ -696,7 +696,8 @@ const ComposeMode = {
     btn.disabled = true;
     btn.textContent = t('rendering');
     try {
-      const blob = await window.renderCompositionToWav(this.tracks, this.bpm, this.steps, this.swing);
+      const tracksToExport = Object.assign({}, this.tracks, { muted: this.muted, solo: this.solo });
+      const blob = await window.renderCompositionToWav(tracksToExport, this.bpm, this.steps, this.swing);
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'tonora-composition.wav';
@@ -711,7 +712,8 @@ const ComposeMode = {
 
   exportMidi() {
     try {
-      const bytes = window.buildMidiFile(this.tracks, this.bpm, this.steps, this.swing);
+      const tracksToExport = Object.assign({}, this.tracks, { muted: this.muted, solo: this.solo });
+      const bytes = window.buildMidiFile(tracksToExport, this.bpm, this.steps, this.swing);
       const blob = new Blob([bytes], { type: 'audio/midi' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);

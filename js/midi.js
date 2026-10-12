@@ -38,6 +38,9 @@ function buildMidiFile(tracks, bpm, steps, swing) {
 
   const vel = Math.max(1, Math.min(127, Math.round((tracks.velocity !== undefined ? tracks.velocity : 0.8) * 127)));
 
+  const soloed = tracks.solo && Object.values(tracks.solo).some(Boolean);
+  const audible = (track) => soloed ? !!tracks.solo[track] : !(tracks.muted && tracks.muted[track]);
+
   let cursor = 0;
   for (let s = 0; s < steps; s++) {
     let dur = stepTicks;
@@ -46,7 +49,7 @@ function buildMidiFile(tracks, bpm, steps, swing) {
     cursor += dur;
 
     const mel = tracks.melody && tracks.melody[s];
-    if (mel) {
+    if (mel && audible('melody')) {
       (Array.isArray(mel) ? mel : [mel]).forEach(n => {
         const nn = noteNameToMidi(n);
         if (nn == null) return;
@@ -55,7 +58,7 @@ function buildMidiFile(tracks, bpm, steps, swing) {
       });
     }
     const bass = tracks.bass && tracks.bass[s];
-    if (bass) {
+    if (bass && audible('bass')) {
       (Array.isArray(bass) ? bass : [bass]).forEach(n => {
         const nn = noteNameToMidi(n);
         if (nn == null) return;
@@ -64,7 +67,7 @@ function buildMidiFile(tracks, bpm, steps, swing) {
       });
     }
     const d = tracks.drums;
-    if (d) {
+    if (d && audible('drums')) {
       const hit = (name) => {
         const nn = DRUM_NOTE[name];
         if (nn == null) return;

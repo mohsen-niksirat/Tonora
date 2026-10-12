@@ -16,7 +16,7 @@ Tonora is a client-side music studio: play virtual instruments, learn famous son
   - 🔁 **A–B repeat** — loop the next 8 notes until you nail them.
 - 🎼 **Compose** — Multi-track step sequencer (melody / bass / drums) with **chords** (stack several notes on one step), **velocity** slider (0.4–1.0), tempo control, save to local storage, import/export songs as JSON.
 - 💾 **WAV export** — render your composition offline and download `tonora-composition.wav` (16-bit PCM, plays anywhere).
-- 🏅 **Achievements** — 6 badges (First Song, 100+ Combo, Composer, Exporter, MIDI Master, 3-Day Streak) shown on the home screen, persisted in localStorage.
+- 🏅 **Achievements** — 7 badges (First Song, 100+ Combo, Composer, Exporter, MIDI Master, Theory Student, 3-Day Streak) shown on the home screen, persisted in localStorage.
 - 🌐 Bilingual (English / فارسی) with RTL support.
 - 📱 Installable PWA — works fully offline.
 - 🔊 100% Web Audio synthesis — zero audio files, tiny payload.

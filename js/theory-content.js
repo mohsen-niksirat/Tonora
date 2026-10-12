@@ -50,7 +50,9 @@ function noteTranspose(root, interval) {
   const p = parsePc(root);
   const semis = INTERVAL_SEMIS[interval];
   if (!p || semis == null) return root;
-  return assignOctaves([SEMIS[(p.pc + semis) % 12]], p.oct)[0];
+  const octOffset = Math.floor((p.pc + semis) / 12);
+  const pc = SEMIS[((p.pc + semis) % 12 + 12) % 12];
+  return pc + (p.oct + octOffset);
 }
 
 function chordNotes(root, quality) {

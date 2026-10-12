@@ -75,11 +75,16 @@ const PlayMode = {
             const note = keys[this.arpIndex];
             const def = this.inst(this.current);
             window.TonoraAudio.playNote(def, note, 0.15, 0.8);
+            if (this.piano) this.piano.flash(note);
           }, 150); // ~100bpm 16th notes
         }
       };
     }
     const recBtn = root.querySelector('#rec-btn');
+    if (recBtn && window.TonoraAudio.isRecording) {
+      recBtn.classList.add('recording');
+      recBtn.innerHTML = `⏹ ${t('stopRec')}`;
+    }
     if (recBtn) {
       recBtn.onclick = async () => {
         if (window.TonoraAudio.isRecording) {
@@ -123,6 +128,14 @@ const PlayMode = {
     if (octBox) octBox.classList.toggle('hidden', inst.type === 'drumkit');
     const susBtn = document.getElementById('sustain-btn');
     if (susBtn) susBtn.classList.toggle('hidden', inst.type === 'drumkit');
+    const arpBtn = document.getElementById('arp-btn');
+    if (arpBtn) arpBtn.classList.toggle('hidden', inst.type === 'drumkit');
+    if (inst.type === 'drumkit' && this.arpTimer) {
+      clearInterval(this.arpTimer);
+      this.arpTimer = null;
+      this.arpActive = false;
+      if (arpBtn) arpBtn.classList.remove('active');
+    }
     if (this.piano) { this.piano.destroy(); this.piano = null; }
     if (inst.type === 'drumkit') {
       surf.innerHTML = '<div class="drum-grid" id="drum-grid"></div>';
@@ -140,7 +153,8 @@ const PlayMode = {
       });
       this._drumKeys = (e) => {
         if (e.repeat) return;
-        const pad = [...grid.children].find(p => p._key === e.key.toLowerCase());
+        const k = e.key.toLowerCase();
+        const pad = [...grid.children].find((p, idx) => p._key === k || String(idx + 1) === k);
         if (pad) pad._hit();
       };
       window.addEventListener('keydown', this._drumKeys);
@@ -152,6 +166,7 @@ const PlayMode = {
         octaves: 2,
         startOctave: this.octave,
         onNote: (note) => {
+          if (this.arpActive) return;
           const dur = (this.piano && this.piano.sustain) ? 3.0 : 0;
           window.TonoraAudio.playNote(inst, note, dur);
         },

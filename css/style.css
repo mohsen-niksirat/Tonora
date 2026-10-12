@@ -20,12 +20,12 @@ body {
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
-body.home-active[data-theme="dark"] {
+html[data-theme="dark"] body.home-active {
   background: linear-gradient(-45deg, #0f1220, #1e1b4b, #0f1220, #311042);
   background-size: 400% 400%;
   animation: meshGradient 15s ease infinite;
 }
-body.home-active:not([data-theme="dark"]) {
+html:not([data-theme="dark"]) body.home-active {
   background: linear-gradient(-45deg, #f2f4fb, #e0e7ff, #f2f4fb, #f3e8ff);
   background-size: 400% 400%;
   animation: meshGradient 15s ease infinite;

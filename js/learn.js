@@ -297,6 +297,11 @@ const LearnMode = {
       this.combo = 0;
     }
     this.setScore();
+    this.checkCompletion(spb);
+  },
+
+  checkCompletion(spb) {
+    if (this.phase !== 'play' || !this.song) return;
     // finished (or loop range finished)?
     const total = this.repeat ? this.repeat.startIdx + this.repeat.count : this.song.notes.length;
     const inRange = this.repeat
@@ -341,6 +346,7 @@ const LearnMode = {
           this.setStatus(t('miss'));
         }
       });
+      this.checkCompletion(spb);
     }
     this.draw(now, spb);
     this.raf = requestAnimationFrame(() => this.loop());
@@ -458,7 +464,7 @@ const LearnMode = {
           <div class="sum-item"><small>${t('score')}</small><strong>${this.score}</strong></div>
           <div class="sum-item"><small>${t('accuracy')}</small><strong>${accuracy}%</strong></div>
           <div class="sum-item"><small>${t('maxCombo')}</small><strong>🔥 ${this.maxCombo || 0}</strong></div>
-          <div class="sum-item"><small>🏆 Best</small><strong>${best}</strong></div>
+          <div class="sum-item"><small>🏆 ${t('bestScore')}</small><strong>${best}</strong></div>
         </div>
         <div class="summary-actions">
           <button class="btn primary" id="sum-replay">🔄 ${t('playAgain')}</button>

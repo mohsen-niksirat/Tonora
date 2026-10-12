@@ -287,6 +287,8 @@ const TheoryMode = {
 
   judge(ok) {
     const prompt = document.getElementById('th-prompt');
+    if (this._judgeTimer) { clearTimeout(this._judgeTimer); this._judgeTimer = null; }
+    if (this._retryTimer) { clearTimeout(this._retryTimer); this._retryTimer = null; }
     if (ok) {
       this.streak++;
       this.score += 10 + this.streak * 2;
@@ -294,13 +296,17 @@ const TheoryMode = {
       this.updateScore();
       this.playAnswer();
       TonoraAchievements.unlock('theorist');
-      setTimeout(() => { if (this.lesson) this.newQuestion(); }, 1600);
+      this._judgeTimer = setTimeout(() => {
+        this._judgeTimer = null;
+        if (this.lesson) this.newQuestion();
+      }, 1600);
     } else {
       this.streak = 0;
       this.played = [];
       if (prompt) prompt.textContent = `❌ ${t('tryAgain')}`;
       this.updateScore();
-      setTimeout(() => {
+      this._retryTimer = setTimeout(() => {
+        this._retryTimer = null;
         const p = document.getElementById('th-prompt');
         if (p && this.lesson) p.textContent = this.promptText;
       }, 900);
@@ -319,6 +325,8 @@ const TheoryMode = {
 
   stopPlayback() {
     if (this.playback) { this.playback.stop(); this.playback = null; }
+    if (this._judgeTimer) { clearTimeout(this._judgeTimer); this._judgeTimer = null; }
+    if (this._retryTimer) { clearTimeout(this._retryTimer); this._retryTimer = null; }
     this.clearHighlights();
   },
 
