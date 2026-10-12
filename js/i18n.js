@@ -41,7 +41,9 @@ const I18N = {
     playInterval: 'Play the note', above: 'above', playChord: 'Play the chord', playScale: 'Play the scale',
     minor: 'Minor', major: 'Major', hearIt: 'Hear it', skip: 'Skip', correct: 'Correct!', tryAgain: 'Try again',
     whatDidYouHear: 'What did you hear?', listenAgain: 'Listen again', bestScore: 'Best',
-    chords: 'Chords', singleNotes: 'Single', scaleGuide: 'Scale Guide', allKeys: 'All Keys'
+    chords: 'Chords', singleNotes: 'Single', scaleGuide: 'Scale Guide', allKeys: 'All Keys',
+    eqTitle: 'Equalizer & Chorus FX', eq: 'Equalizer', eqBass: 'Bass', eqMid: 'Mid', eqTreble: 'Treble',
+    chorus: 'Chorus', chorusMix: 'Chorus Mix', flat: 'Flat', bassBoost: 'Bass Boost', bright: 'Bright', warm: 'Warm'
   },
   fa: {
     play: 'اجرا', learn: 'آموزش', compose: 'آهنگسازی', theory: 'تئوری',
@@ -82,7 +84,9 @@ const I18N = {
     playInterval: 'نت را بنواز', above: 'بالای', playChord: 'آکورد را بنواز', playScale: 'گام را بنواز',
     minor: 'مینور', major: 'ماژور', hearIt: 'بشنو', skip: 'رد کردن', correct: 'درست است!', tryAgain: 'دوباره تلاش کن',
     whatDidYouHear: 'چه شنیدی؟', listenAgain: 'دوباره گوش کن', bestScore: 'بهترین',
-    chords: 'آکوردها', singleNotes: 'تک‌نت', scaleGuide: 'راهنمای گام', allKeys: 'همه کلیدها'
+    chords: 'آکوردها', singleNotes: 'تک‌نت', scaleGuide: 'راهنمای گام', allKeys: 'همه کلیدها',
+    eqTitle: 'اکولایزر و کروس صوتی', eq: 'اکولایزر', eqBass: 'باس', eqMid: 'میدرنج', eqTreble: 'تریبل',
+    chorus: 'کروس', chorusMix: 'شدت کروس', flat: 'تخت', bassBoost: 'تقویت باس', bright: 'شفاف', warm: 'گرم'
   }
 };
 

@@ -129,7 +129,8 @@ function test(name, fn) {
     scheduleDrum() { return { stop() {} }; },
     setBusGain() {}, setBusPan() {}, getBusLevel() { return 0; },
     getVisualizerData() { return null; },
-    setMasterGain() {}, setReverbGain() {}, setDelayGain() {}
+    setMasterGain() {}, setReverbGain() {}, setDelayGain() {},
+    setEq() {}, setChorus() {}
   };
 
   inject(inline);

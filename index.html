@@ -39,6 +39,7 @@ try {
       <input type="range" id="del-slider" min="0" max="1" step="0.05" value="0" aria-label="Delay">
     </div>
     <canvas id="vis-canvas" width="64" height="24" title="Audio Visualizer" aria-hidden="true"></canvas>
+    <button class="icon-btn" id="fx-btn" title="Equalizer &amp; FX" aria-label="Equalizer and FX">🎚️</button>
     <button class="icon-btn" id="kb-btn" title="Shortcuts" aria-label="Keyboard shortcuts">⌨️</button>
     <button class="icon-btn" id="theme-btn" title="Theme" aria-label="Toggle theme">🌓</button>
     <button class="icon-btn" id="lang-btn" title="Language" aria-label="Change language">🌐</button>
@@ -63,6 +64,46 @@ try {
         <tr><td><kbd>Space</kbd></td><td>Toggle Sustain Pedal</td></tr>
         <tr><td><kbd>1</kbd>–<kbd>6</kbd> / <kbd>Z</kbd>–<kbd>N</kbd> (Drums)</td><td>Trigger Drum Pads</td></tr>
       </table>
+    </div>
+  </div>
+</div>
+
+<!-- Equalizer & Chorus FX Modal -->
+<div id="fx-modal" class="modal hidden">
+  <div class="modal-box fx-modal-box">
+    <div class="modal-header">
+      <h3 id="fx-title">🎚️ Equalizer &amp; Chorus FX</h3>
+      <button class="btn icon-btn" id="fx-close">✕</button>
+    </div>
+    <div class="fx-section">
+      <h4 id="fx-eq-head">🎛️ 3-Band Equalizer</h4>
+      <div class="fx-sliders-grid">
+        <div class="fx-control">
+          <label for="eq-bass-slider"><span id="lbl-bass">🔊 Bass (100Hz)</span><span id="eq-bass-val">0 dB</span></label>
+          <input type="range" id="eq-bass-slider" min="-12" max="12" step="1" value="0">
+        </div>
+        <div class="fx-control">
+          <label for="eq-mid-slider"><span id="lbl-mid">🎙️ Mid (1kHz)</span><span id="eq-mid-val">0 dB</span></label>
+          <input type="range" id="eq-mid-slider" min="-12" max="12" step="1" value="0">
+        </div>
+        <div class="fx-control">
+          <label for="eq-treble-slider"><span id="lbl-treble">✨ Treble (3.2kHz)</span><span id="eq-treble-val">0 dB</span></label>
+          <input type="range" id="eq-treble-slider" min="-12" max="12" step="1" value="0">
+        </div>
+      </div>
+      <div class="fx-presets">
+        <button class="btn" id="pre-flat" data-eq="flat">Flat</button>
+        <button class="btn" id="pre-bass" data-eq="bass">Bass Boost</button>
+        <button class="btn" id="pre-bright" data-eq="bright">Bright</button>
+        <button class="btn" id="pre-warm" data-eq="warm">Warm</button>
+      </div>
+    </div>
+    <div class="fx-section">
+      <h4 id="fx-chorus-head">🌊 Stereo Chorus FX</h4>
+      <div class="fx-control">
+        <label for="chorus-slider"><span id="lbl-chorus">Chorus Mix</span><span id="chorus-val">0%</span></label>
+        <input type="range" id="chorus-slider" min="0" max="1" step="0.05" value="0">
+      </div>
     </div>
   </div>
 </div>
@@ -296,6 +337,75 @@ if (kbBtn && kbModal && kbClose) {
   kbModal.onclick = (e) => { if (e.target === kbModal) kbModal.classList.add('hidden'); };
 }
 
+// Equalizer & Chorus FX Modal
+const fxBtn = document.getElementById('fx-btn');
+const fxModal = document.getElementById('fx-modal');
+const fxClose = document.getElementById('fx-close');
+const eqBassSlider = document.getElementById('eq-bass-slider');
+const eqMidSlider = document.getElementById('eq-mid-slider');
+const eqTrebleSlider = document.getElementById('eq-treble-slider');
+const chorusSlider = document.getElementById('chorus-slider');
+const eqBassVal = document.getElementById('eq-bass-val');
+const eqMidVal = document.getElementById('eq-mid-val');
+const eqTrebleVal = document.getElementById('eq-treble-val');
+const chorusVal = document.getElementById('chorus-val');
+
+function updateEqUI() {
+  const b = +(eqBassSlider ? eqBassSlider.value : 0);
+  const m = +(eqMidSlider ? eqMidSlider.value : 0);
+  const tr = +(eqTrebleSlider ? eqTrebleSlider.value : 0);
+  if (eqBassVal) eqBassVal.textContent = `${b > 0 ? '+' : ''}${b} dB`;
+  if (eqMidVal) eqMidVal.textContent = `${m > 0 ? '+' : ''}${m} dB`;
+  if (eqTrebleVal) eqTrebleVal.textContent = `${tr > 0 ? '+' : ''}${tr} dB`;
+  if (window.TonoraAudio && window.TonoraAudio.setEq) window.TonoraAudio.setEq(b, m, tr);
+  localStorage.setItem('tonora-eq-bass', b);
+  localStorage.setItem('tonora-eq-mid', m);
+  localStorage.setItem('tonora-eq-treble', tr);
+}
+
+function updateChorusUI() {
+  const ch = +(chorusSlider ? chorusSlider.value : 0);
+  if (chorusVal) chorusVal.textContent = `${Math.round(ch * 100)}%`;
+  if (window.TonoraAudio && window.TonoraAudio.setChorus) window.TonoraAudio.setChorus(ch);
+  localStorage.setItem('tonora-chorus', ch);
+}
+
+if (fxBtn && fxModal && fxClose) {
+  fxBtn.onclick = () => {
+    document.getElementById('fx-title').textContent = `🎚️ ${t('eqTitle')}`;
+    document.getElementById('fx-eq-head').textContent = `🎛️ ${t('eq')}`;
+    document.getElementById('lbl-bass').textContent = `🔊 ${t('eqBass')} (100Hz)`;
+    document.getElementById('lbl-mid').textContent = `🎙️ ${t('eqMid')} (1kHz)`;
+    document.getElementById('lbl-treble').textContent = `✨ ${t('eqTreble')} (3.2kHz)`;
+    document.getElementById('fx-chorus-head').textContent = `🌊 ${t('chorus')}`;
+    document.getElementById('lbl-chorus').textContent = t('chorusMix');
+    document.getElementById('pre-flat').textContent = t('flat');
+    document.getElementById('pre-bass').textContent = t('bassBoost');
+    document.getElementById('pre-bright').textContent = t('bright');
+    document.getElementById('pre-warm').textContent = t('warm');
+    fxModal.classList.remove('hidden');
+    if (hdrExtra) { hdrExtra.classList.remove('open'); moreBtn.setAttribute('aria-expanded', 'false'); }
+  };
+  fxClose.onclick = () => fxModal.classList.add('hidden');
+  fxModal.onclick = (e) => { if (e.target === fxModal) fxModal.classList.add('hidden'); };
+}
+
+if (eqBassSlider) eqBassSlider.oninput = updateEqUI;
+if (eqMidSlider) eqMidSlider.oninput = updateEqUI;
+if (eqTrebleSlider) eqTrebleSlider.oninput = updateEqUI;
+if (chorusSlider) chorusSlider.oninput = updateChorusUI;
+
+document.querySelectorAll('.fx-presets button').forEach(btn => {
+  btn.onclick = () => {
+    const p = btn.dataset.eq;
+    if (p === 'flat') { eqBassSlider.value = 0; eqMidSlider.value = 0; eqTrebleSlider.value = 0; }
+    else if (p === 'bass') { eqBassSlider.value = 6; eqMidSlider.value = 1; eqTrebleSlider.value = -2; }
+    else if (p === 'bright') { eqBassSlider.value = -2; eqMidSlider.value = 2; eqTrebleSlider.value = 6; }
+    else if (p === 'warm') { eqBassSlider.value = 4; eqMidSlider.value = -1; eqTrebleSlider.value = -3; }
+    updateEqUI();
+  };
+});
+
 // PWA
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -308,6 +418,16 @@ loadData().then(() => {
   if (savedRev !== null) window.TonoraAudio.setReverbGain(+savedRev);
   const savedDel = localStorage.getItem('tonora-delay');
   if (savedDel !== null) window.TonoraAudio.setDelayGain(+savedDel);
+  const savedEqBass = localStorage.getItem('tonora-eq-bass');
+  const savedEqMid = localStorage.getItem('tonora-eq-mid');
+  const savedEqTreble = localStorage.getItem('tonora-eq-treble');
+  const savedChorus = localStorage.getItem('tonora-chorus');
+  if (savedEqBass !== null && eqBassSlider) eqBassSlider.value = savedEqBass;
+  if (savedEqMid !== null && eqMidSlider) eqMidSlider.value = savedEqMid;
+  if (savedEqTreble !== null && eqTrebleSlider) eqTrebleSlider.value = savedEqTreble;
+  if (savedChorus !== null && chorusSlider) chorusSlider.value = savedChorus;
+  updateEqUI();
+  updateChorusUI();
   document.documentElement.lang = getLang();
   document.documentElement.dir = getLang() === 'fa' ? 'rtl' : 'ltr';
   document.getElementById('lang-btn').textContent = getLang() === 'fa' ? '🌐 EN' : '🌐 FA';

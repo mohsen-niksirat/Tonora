@@ -283,6 +283,19 @@ html[dir="rtl"] .kb-table { text-align: right; }
 .modal-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .modal-header h3 { margin: 0; font-size: 1.05rem; }
 
+/* ---- FX & EQ Modal ---- */
+.fx-modal-box { max-width: 480px; }
+.fx-section { margin-top: .9rem; padding-top: .75rem; border-top: 1px solid rgba(255,255,255,.08); }
+.fx-section:first-of-type { border-top: none; padding-top: .3rem; }
+.fx-section h4 { margin: 0 0 .65rem; font-size: .92rem; color: var(--accent); }
+.fx-sliders-grid { display: flex; flex-direction: column; gap: .65rem; }
+.fx-control { display: flex; flex-direction: column; gap: .25rem; }
+.fx-control label { display: flex; justify-content: space-between; font-size: .82rem; color: var(--muted); }
+.fx-control label span:last-child { font-weight: 600; color: var(--text); font-family: monospace; font-size: .85rem; }
+.fx-control input[type=range] { width: 100%; height: 5px; accent-color: var(--accent); cursor: pointer; }
+.fx-presets { display: flex; gap: .4rem; margin-top: .75rem; flex-wrap: wrap; }
+.fx-presets .btn { padding: .3rem .65rem; font-size: .78rem; border-radius: .45rem; }
+
 /* ---- Compose secondary controls (collapsed behind ⋯ on mobile) ---- */
 #cmp-more { display: contents; }
 #cmp-more-btn { display: none; }

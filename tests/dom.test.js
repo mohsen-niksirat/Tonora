@@ -58,9 +58,20 @@ test('all modules loaded without throwing', () => {
   assert.ok(typeof window.midiToTracks === 'function');
 });
 
-test('AudioEngine exposes the bus API', () => {
-  ['getBus', 'setBusGain', 'setBusPan', 'getBusLevel'].forEach(m =>
+test('AudioEngine exposes the bus and FX API', () => {
+  ['getBus', 'setBusGain', 'setBusPan', 'getBusLevel', 'setEq', 'setChorus'].forEach(m =>
     assert.strictEqual(typeof window.TonoraAudio[m], 'function', m + ' missing'));
+});
+
+test('AudioEngine setEq and setChorus update internal parameters', () => {
+  window.TonoraAudio.setEq(4, -2, 6);
+  assert.strictEqual(window.TonoraAudio.eq.bass, 4);
+  assert.strictEqual(window.TonoraAudio.eq.mid, -2);
+  assert.strictEqual(window.TonoraAudio.eq.treble, 6);
+  window.TonoraAudio.setChorus(0.35, 2.0, 0.003);
+  assert.strictEqual(window.TonoraAudio.chorus.wet, 0.35);
+  assert.strictEqual(window.TonoraAudio.chorus.rate, 2.0);
+  assert.strictEqual(window.TonoraAudio.chorus.depth, 0.003);
 });
 
 test('normalizeTracks upgrades a legacy drum lane to kick/snare/hat', () => {

@@ -32,6 +32,8 @@ class AudioEngine {
     this._reviving = false;
     this.buses = {};
     this._voices = [];
+    this.eq = { bass: 0, mid: 0, treble: 0 };
+    this.chorus = { wet: 0, rate: 1.5, depth: 0.002 };
   }
 
   ensure() {
@@ -39,6 +41,68 @@ class AudioEngine {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
       this.master = this.ctx.createGain();
       this.master.gain.value = 0.7;
+
+      // 3-Band Equalizer (Bass 100Hz, Mid 1kHz, Treble 3.2kHz)
+      this.eqBass = this.ctx.createBiquadFilter();
+      this.eqBass.type = 'lowshelf';
+      this.eqBass.frequency.value = 100;
+      this.eqBass.gain.value = this.eq.bass;
+
+      this.eqMid = this.ctx.createBiquadFilter();
+      this.eqMid.type = 'peaking';
+      this.eqMid.frequency.value = 1000;
+      this.eqMid.Q.value = 1.0;
+      this.eqMid.gain.value = this.eq.mid;
+
+      this.eqTreble = this.ctx.createBiquadFilter();
+      this.eqTreble.type = 'highshelf';
+      this.eqTreble.frequency.value = 3200;
+      this.eqTreble.gain.value = this.eq.treble;
+
+      this.master.connect(this.eqBass);
+      this.eqBass.connect(this.eqMid);
+      this.eqMid.connect(this.eqTreble);
+
+      // Stereo Chorus FX (LFO modulated dual delay)
+      this.chorusDry = this.ctx.createGain();
+      this.chorusDry.gain.value = 1.0;
+      this.chorusWet = this.ctx.createGain();
+      this.chorusWet.gain.value = this.chorus.wet;
+
+      this.chorusDelayL = this.ctx.createDelay(0.1);
+      this.chorusDelayR = this.ctx.createDelay(0.1);
+      this.chorusDelayL.delayTime.value = 0.020;
+      this.chorusDelayR.delayTime.value = 0.022;
+
+      this.chorusLfo = this.ctx.createOscillator();
+      this.chorusLfo.type = 'sine';
+      this.chorusLfo.frequency.value = this.chorus.rate;
+
+      this.chorusDepthL = this.ctx.createGain();
+      this.chorusDepthL.gain.value = this.chorus.depth;
+      this.chorusDepthR = this.ctx.createGain();
+      this.chorusDepthR.gain.value = -this.chorus.depth;
+
+      this.chorusLfo.connect(this.chorusDepthL);
+      this.chorusLfo.connect(this.chorusDepthR);
+      this.chorusDepthL.connect(this.chorusDelayL.delayTime);
+      this.chorusDepthR.connect(this.chorusDelayR.delayTime);
+      try { this.chorusLfo.start(); } catch (e) {}
+
+      if (this.ctx.createChannelMerger) {
+        const merger = this.ctx.createChannelMerger(2);
+        this.chorusDelayL.connect(merger, 0, 0);
+        this.chorusDelayR.connect(merger, 0, 1);
+        merger.connect(this.chorusWet);
+      } else {
+        this.chorusDelayL.connect(this.chorusWet);
+        this.chorusDelayR.connect(this.chorusWet);
+      }
+
+      this.eqTreble.connect(this.chorusDry);
+      this.eqTreble.connect(this.chorusDelayL);
+      this.eqTreble.connect(this.chorusDelayR);
+
       // Studio brickwall limiter compressor to prevent digital clipping
       this.limiter = this.ctx.createDynamicsCompressor();
       this.limiter.threshold.value = -3;
@@ -46,7 +110,8 @@ class AudioEngine {
       this.limiter.ratio.value = 12;
       this.limiter.attack.value = 0.003;
       this.limiter.release.value = 0.15;
-      this.master.connect(this.limiter);
+      this.chorusDry.connect(this.limiter);
+      this.chorusWet.connect(this.limiter);
       // Analyser for real-time visualizer
       this.analyser = this.ctx.createAnalyser();
       this.analyser.fftSize = 64;
@@ -112,6 +177,31 @@ class AudioEngine {
     if (this.delayOut && this.ctx) {
       const v = Math.max(0, Math.min(1.0, val));
       this.delayOut.gain.setTargetAtTime(v, this.ctx.currentTime, 0.03);
+    }
+  }
+
+  setEq(bass, mid, treble) {
+    if (bass !== undefined) this.eq.bass = Math.max(-12, Math.min(12, Number(bass)));
+    if (mid !== undefined) this.eq.mid = Math.max(-12, Math.min(12, Number(mid)));
+    if (treble !== undefined) this.eq.treble = Math.max(-12, Math.min(12, Number(treble)));
+    if (this.ctx && this.eqBass) {
+      const t = this.ctx.currentTime;
+      this.eqBass.gain.setTargetAtTime(this.eq.bass, t, 0.03);
+      this.eqMid.gain.setTargetAtTime(this.eq.mid, t, 0.03);
+      this.eqTreble.gain.setTargetAtTime(this.eq.treble, t, 0.03);
+    }
+  }
+
+  setChorus(wet, rate, depth) {
+    if (wet !== undefined) this.chorus.wet = Math.max(0, Math.min(1, Number(wet)));
+    if (rate !== undefined) this.chorus.rate = Math.max(0.1, Math.min(8, Number(rate)));
+    if (depth !== undefined) this.chorus.depth = Math.max(0.0005, Math.min(0.01, Number(depth)));
+    if (this.ctx && this.chorusWet) {
+      const t = this.ctx.currentTime;
+      this.chorusWet.gain.setTargetAtTime(this.chorus.wet, t, 0.03);
+      if (this.chorusLfo) this.chorusLfo.frequency.setTargetAtTime(this.chorus.rate, t, 0.03);
+      if (this.chorusDepthL) this.chorusDepthL.gain.setTargetAtTime(this.chorus.depth, t, 0.03);
+      if (this.chorusDepthR) this.chorusDepthR.gain.setTargetAtTime(-this.chorus.depth, t, 0.03);
     }
   }
 
@@ -609,13 +699,74 @@ async function renderCompositionToWav(tracks, bpm, steps, swing) {
   const off = new OfflineAudioContext(2, Math.ceil(totalDur * sr), sr);
   const master = off.createGain();
   master.gain.value = 0.7;
+
+  // 3-Band EQ & Chorus offline mirroring
+  const eqBassVal = (typeof localStorage !== 'undefined') ? localStorage.getItem('tonora-eq-bass') : null;
+  const eqMidVal = (typeof localStorage !== 'undefined') ? localStorage.getItem('tonora-eq-mid') : null;
+  const eqTrebleVal = (typeof localStorage !== 'undefined') ? localStorage.getItem('tonora-eq-treble') : null;
+  const chorusWetVal = (typeof localStorage !== 'undefined') ? localStorage.getItem('tonora-chorus') : null;
+
+  const eqBass = off.createBiquadFilter();
+  eqBass.type = 'lowshelf';
+  eqBass.frequency.value = 100;
+  eqBass.gain.value = eqBassVal !== null ? +eqBassVal : 0;
+
+  const eqMid = off.createBiquadFilter();
+  eqMid.type = 'peaking';
+  eqMid.frequency.value = 1000;
+  eqMid.Q.value = 1.0;
+  eqMid.gain.value = eqMidVal !== null ? +eqMidVal : 0;
+
+  const eqTreble = off.createBiquadFilter();
+  eqTreble.type = 'highshelf';
+  eqTreble.frequency.value = 3200;
+  eqTreble.gain.value = eqTrebleVal !== null ? +eqTrebleVal : 0;
+
+  master.connect(eqBass);
+  eqBass.connect(eqMid);
+  eqMid.connect(eqTreble);
+
   const limiter = off.createDynamicsCompressor();
   limiter.threshold.value = -3;
   limiter.knee.value = 6;
   limiter.ratio.value = 12;
   limiter.attack.value = 0.003;
   limiter.release.value = 0.15;
-  master.connect(limiter);
+
+  const cWet = chorusWetVal !== null ? +chorusWetVal : 0;
+  if (cWet > 0) {
+    const chorusDry = off.createGain();
+    chorusDry.gain.value = 1.0;
+    const chorusWet = off.createGain();
+    chorusWet.gain.value = cWet;
+    const delayL = off.createDelay(0.1);
+    const delayR = off.createDelay(0.1);
+    delayL.delayTime.value = 0.020;
+    delayR.delayTime.value = 0.022;
+    const lfo = off.createOscillator();
+    lfo.frequency.value = 1.5;
+    const depthL = off.createGain(); depthL.gain.value = 0.002;
+    const depthR = off.createGain(); depthR.gain.value = -0.002;
+    lfo.connect(depthL); depthL.connect(delayL.delayTime);
+    lfo.connect(depthR); depthR.connect(delayR.delayTime);
+    try { lfo.start(0); } catch (e) {}
+    eqTreble.connect(chorusDry);
+    eqTreble.connect(delayL);
+    eqTreble.connect(delayR);
+    if (off.createChannelMerger) {
+      const merger = off.createChannelMerger(2);
+      delayL.connect(merger, 0, 0);
+      delayR.connect(merger, 0, 1);
+      merger.connect(chorusWet);
+    } else {
+      delayL.connect(chorusWet);
+      delayR.connect(chorusWet);
+    }
+    chorusDry.connect(limiter);
+    chorusWet.connect(limiter);
+  } else {
+    eqTreble.connect(limiter);
+  }
   limiter.connect(off.destination);
   const reverb = off.createConvolver();
   reverb.buffer = makeReverbBuffer(off);
