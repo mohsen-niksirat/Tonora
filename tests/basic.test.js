@@ -44,6 +44,20 @@ test('invalid note falls back to 440Hz', () => {
   assert.strictEqual(noteToFreq('H9'), 440);
 });
 
+test('noteToFreq supports Persian Koron and Sori microtones', () => {
+  const e4 = noteToFreq('E4');
+  const ep4 = noteToFreq('Ep4');
+  const eb4 = noteToFreq('Eb4');
+  assert.ok(ep4 > eb4 && ep4 < e4, 'Ep4 should lie between Eb4 and E4');
+  const quarterRatio = Math.pow(2, 0.5 / 12);
+  assert.ok(Math.abs(e4 / ep4 - quarterRatio) < 1e-6);
+  assert.ok(Math.abs(ep4 / eb4 - quarterRatio) < 1e-6);
+
+  const f4 = noteToFreq('F4');
+  const fs4 = noteToFreq('F>4');
+  assert.ok(Math.abs(fs4 / f4 - quarterRatio) < 1e-6);
+});
+
 test('audioBufferToWav writes a valid RIFF/WAVE header', () => {
   const frames = 100;
   const fakeBuffer = {

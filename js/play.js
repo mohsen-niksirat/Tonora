@@ -8,7 +8,28 @@ const PlayMode = {
   octave: 3,
   chordMode: '',
   scaleGuide: '',
+  tuningMode: '',
+  tuningMap: null,
   midi: null,        // {access, input}
+
+  getTuningMap(mode) {
+    const DASTGAH_PRESETS = {
+      shur:      { E: 'Ep', A: 'Ap' },
+      segah:     { E: 'Ep', B: 'Bp' },
+      homayoun:  { E: 'Ep' },
+      esfahan:   { E: 'Ep' },
+      chahargah: { E: 'Ep', A: 'Ap' }
+    };
+    const preset = DASTGAH_PRESETS[mode];
+    if (!preset) return null;
+    const map = {};
+    for (let o = 1; o <= 6; o++) {
+      for (const [k, v] of Object.entries(preset)) {
+        map[k + o] = v + o;
+      }
+    }
+    return map;
+  },
 
   inst(id) {
     return (window.TONORA_INSTRUMENTS || []).find(i => i.id === id);
@@ -29,6 +50,14 @@ const PlayMode = {
           <span class="oct-lbl" id="oct-lbl">C${this.octave}–B${this.octave + 1}</span>
           <button class="btn oct-btn" id="oct-up" title="${t('octave')} +">▶</button>
         </div>
+        <select class="btn" id="tuning-sel" title="${t('tuning')}" style="font-size:0.8rem; padding:0.35rem 0.5rem">
+          <option value="">🎵 ${t('standard12tet')}</option>
+          <option value="shur">🇮🇷 شور (Shur: Ep, Ap)</option>
+          <option value="segah">🇮🇷 سه‌گاه (Segah: Ep, Bp)</option>
+          <option value="homayoun">🇮🇷 همایون (Homayoun: Ep)</option>
+          <option value="esfahan">🇮🇷 بیات اصفهان (Esfahan: Ep)</option>
+          <option value="chahargah">🇮🇷 چهارگاه (Chahargah: Ep, Ap)</option>
+        </select>
         <select class="btn" id="chord-sel" title="${t('chords')}" style="font-size:0.8rem; padding:0.35rem 0.5rem">
           <option value="">🎹 ${t('singleNotes')}</option>
           <option value="maj">Major (ماژور)</option>
@@ -44,7 +73,11 @@ const PlayMode = {
           <option value="minor">Minor (A)</option>
           <option value="pentatonic">Pentatonic</option>
           <option value="blues">Blues</option>
-          <option value="shur">Persian Shur</option>
+          <option value="shur">دستگاه شور (Shur)</option>
+          <option value="segah">دستگاه سه‌گاه (Segah)</option>
+          <option value="homayoun">دستگاه همایون (Homayoun)</option>
+          <option value="esfahan">بیات اصفهان (Esfahan)</option>
+          <option value="chahargah">دستگاه چهارگاه (Chahargah)</option>
         </select>
         <button class="btn toggle-btn" id="sustain-btn" title="Space">🦶 ${t('sustain')}</button>
         <button class="btn toggle-btn" id="arp-btn" title="Hold notes to arpeggiate">🎶 Arp</button>
@@ -68,6 +101,15 @@ const PlayMode = {
     root.querySelector('#oct-up').onclick = () => {
       if (this.octave < 4) { this.octave++; this.updateOctave(); }
     };
+    const tuningSel = root.querySelector('#tuning-sel');
+    if (tuningSel) {
+      tuningSel.value = this.tuningMode;
+      tuningSel.onchange = () => {
+        this.tuningMode = tuningSel.value;
+        this.tuningMap = this.getTuningMap(this.tuningMode);
+        if (this.piano) this.piano.setTuning(this.tuningMap);
+      };
+    }
     const chordSel = root.querySelector('#chord-sel');
     if (chordSel) {
       chordSel.value = this.chordMode;
@@ -160,6 +202,8 @@ const PlayMode = {
     const surf = document.getElementById('play-surface');
     const octBox = document.getElementById('octave-box');
     if (octBox) octBox.classList.toggle('hidden', inst.type === 'drumkit');
+    const tuningSel = document.getElementById('tuning-sel');
+    if (tuningSel) tuningSel.classList.toggle('hidden', inst.type === 'drumkit');
     const chordSel = document.getElementById('chord-sel');
     if (chordSel) chordSel.classList.toggle('hidden', inst.type === 'drumkit');
     const scaleSel = document.getElementById('scale-sel');
@@ -204,6 +248,7 @@ const PlayMode = {
         octaves: 2,
         startOctave: this.octave,
         scale: this.scaleGuide,
+        tuning: this.tuningMap,
         onNote: (note) => {
           if (this.arpActive) return;
           const dur = (this.piano && this.piano.sustain) ? 3.0 : 0;
@@ -282,11 +327,13 @@ const PlayMode = {
           const el = padEls[padIdx];
           if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 120); }
         } else if (this.piano) {
+          const tunedName = (this.tuningMap && this.tuningMap[name]) ? this.tuningMap[name] : name;
           if (this.chordMode && window.TonoraTheory && window.TonoraTheory.chordNotes) {
             const notes = window.TonoraTheory.chordNotes(name, this.chordMode);
             if (notes && notes.length) {
               notes.forEach(n => {
-                window.TonoraAudio.playNote(this.inst(this.current), n, 0, Math.max(0.4, vel / 127));
+                const tunedN = (this.tuningMap && this.tuningMap[n]) ? this.tuningMap[n] : n;
+                window.TonoraAudio.playNote(this.inst(this.current), tunedN, 0, Math.max(0.4, vel / 127));
                 this.piano.press(n);
                 setTimeout(() => this.piano.release(n), 200);
               });
@@ -294,7 +341,7 @@ const PlayMode = {
               return;
             }
           }
-          window.TonoraAudio.playNote(this.inst(this.current), name, 0, Math.max(0.4, vel / 127));
+          window.TonoraAudio.playNote(this.inst(this.current), tunedName, 0, Math.max(0.4, vel / 127));
           this.piano.press(name);
           setTimeout(() => this.piano.release(name), 200);
         }

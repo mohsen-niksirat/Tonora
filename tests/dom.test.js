@@ -162,6 +162,35 @@ test('PlayMode plays full chord in chord mode', () => {
   PM.leave();
 });
 
+test('PianoUI sets and clears Persian microtone tuning badges and emits microtone notes', () => {
+  const container = window.document.createElement('div');
+  window.document.body.appendChild(container);
+  let played = null;
+  const piano = new window.__test.PianoUI(container, {
+    octaves: 2,
+    startOctave: 3,
+    onNote: (n) => { played = n; }
+  });
+  piano.setTuning({ 'E3': 'Ep3' });
+  assert.ok(piano.keys['E3'].classList.contains('koron-key'), 'E3 should have koron-key class');
+  assert.strictEqual(piano.keys['E3'].querySelector('.micro-badge').textContent, '𝄹');
+  piano.press('E3');
+  assert.strictEqual(played, 'Ep3');
+  piano.setTuning(null);
+  assert.ok(!piano.keys['E3'].classList.contains('koron-key'));
+  assert.strictEqual(piano.keys['E3'].querySelector('.micro-badge'), null);
+});
+
+test('PlayMode getTuningMap returns correct Persian Dastgah note mapping', () => {
+  const PM = window.__test.PlayMode;
+  const shur = PM.getTuningMap('shur');
+  assert.strictEqual(shur['E3'], 'Ep3');
+  assert.strictEqual(shur['A4'], 'Ap4');
+  const segah = PM.getTuningMap('segah');
+  assert.strictEqual(segah['E3'], 'Ep3');
+  assert.strictEqual(segah['B3'], 'Bp3');
+});
+
 if (process.exitCode) {
   console.error(`\n${passed} passed, some failed.`);
 } else {

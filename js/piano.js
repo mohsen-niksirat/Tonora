@@ -29,6 +29,7 @@ class PianoUI {
     this.active = new Set();
     this.sustain = false;
     this.sustainedKeys = new Set();
+    this.tuning = opts.tuning || null;
     this._currentScale = opts.scale || '';
     this.build();
     this._bindPC();
@@ -79,6 +80,7 @@ class PianoUI {
       }
     });
     this._bindTouch();
+    if (this.tuning) this.setTuning(this.tuning);
     if (this._currentScale) this.highlightScale(this._currentScale);
   }
 
@@ -172,7 +174,36 @@ class PianoUI {
     this.active.add(note);
     this.sustainedKeys.delete(note);
     el.classList.add('pressed');
-    this.onNote(note);
+    const outNote = (this.tuning && this.tuning[note]) ? this.tuning[note] : note;
+    this.onNote(outNote);
+  }
+
+  setTuning(tuningMap) {
+    this.tuning = tuningMap || null;
+    for (const note in this.keys) {
+      const el = this.keys[note];
+      const tuned = this.tuning ? this.tuning[note] : null;
+      el.classList.toggle('koron-key', !!(tuned && (tuned.includes('p') || tuned.includes('k'))));
+      el.classList.toggle('sori-key', !!(tuned && (tuned.includes('>') || tuned.includes('s'))));
+      let badge = el.querySelector('.micro-badge');
+      if (tuned && (tuned.includes('p') || tuned.includes('k'))) {
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'micro-badge';
+          el.appendChild(badge);
+        }
+        badge.textContent = '𝄹';
+      } else if (tuned && (tuned.includes('>') || tuned.includes('s'))) {
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'micro-badge';
+          el.appendChild(badge);
+        }
+        badge.textContent = '𝄰';
+      } else if (badge) {
+        badge.remove();
+      }
+    }
   }
 
   release(note, el) {
@@ -205,7 +236,11 @@ class PianoUI {
       minor:      { root: 9, intervals: [9, 11, 0, 2, 4, 5, 7] },
       pentatonic: { root: 0, intervals: [0, 2, 4, 7, 9] },
       blues:      { root: 9, intervals: [9, 0, 2, 3, 4, 7] },
-      shur:       { root: 2, intervals: [2, 3, 5, 7, 8, 10, 0] }
+      shur:       { root: 2, intervals: [2, 3, 5, 7, 8, 10, 0] },
+      segah:      { root: 4, intervals: [4, 5, 7, 9, 11, 0, 2] },
+      homayoun:   { root: 7, intervals: [7, 8, 11, 0, 2, 3, 5] },
+      esfahan:    { root: 2, intervals: [2, 4, 5, 7, 9, 10, 0] },
+      chahargah:  { root: 0, intervals: [0, 1, 4, 5, 7, 8, 11] }
     };
     const def = SCALE_DEGREES[scaleType];
     const pitchClasses = def ? new Set(def.intervals) : null;

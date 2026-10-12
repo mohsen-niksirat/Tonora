@@ -4,9 +4,17 @@
 const NOTE_OFFSET = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
 
 function noteToFreq(note) {
-  const m = note.match(/^([A-G]#?)(\d)$/);
+  const m = String(note || '').match(/^([A-G])([#bpk>]?)(-?\d)$/);
   if (!m) return 440;
-  return 440 * Math.pow(2, (NOTE_OFFSET[m[1]] + (parseInt(m[2], 10) + 1) * 12 - 69) / 12);
+  const baseLetter = m[1];
+  const acc = m[2];
+  const oct = parseInt(m[3], 10);
+  let semi = NOTE_OFFSET[baseLetter];
+  if (acc === '#') semi += 1;
+  else if (acc === 'b') semi -= 1;
+  else if (acc === 'p' || acc === 'k') semi -= 0.5; // Koron (quarter-tone flat)
+  else if (acc === '>' || acc === 's') semi += 0.5; // Sori (quarter-tone sharp)
+  return 440 * Math.pow(2, (semi + (oct + 1) * 12 - 69) / 12);
 }
 
 function makeReverbBuffer(ctx) {

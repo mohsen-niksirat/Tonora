@@ -107,6 +107,13 @@ main { flex: 1; display: flex; flex-direction: column; padding: .6rem; max-width
 }
 .key.black.scale-hint::after { bottom: 12px; }
 .key.scale-root::after { background: var(--good); width: 7px; height: 7px; box-shadow: 0 0 6px var(--good); }
+.key .micro-badge {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  font-size: 0.95rem; font-weight: 700; color: var(--accent); pointer-events: none; line-height: 1;
+}
+.key.black .micro-badge { top: 4px; color: #ff9800; font-size: 0.85rem; }
+.key.koron-key { box-shadow: inset 0 -3px 0 var(--accent); }
+.key.sori-key { box-shadow: inset 0 -3px 0 #ff9800; }
 
 .drum-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; padding: 1rem 0; flex: 1; }
 .drum-pad {
